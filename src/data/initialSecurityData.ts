@@ -7,7 +7,7 @@ export const INITIAL_USERS: User[] = [
     name: 'المهندس المشرف (مدير النظام)',
     email: 'admin@secureshop.edu',
     // كلمة المرور الافتراضية: Admin@123456
-    passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918',
+    passwordHash: '2600fc73ca89dfbb3e70b75eb72a642306f6cb7072f2c218ae31c19addb4679b',
     salt: 'salt_secureshop_admin_2026',
     role: 'admin',
     isConfirmed: true,
@@ -25,7 +25,7 @@ export const INITIAL_USERS: User[] = [
     name: 'أحمد علي (عميل متجر)',
     email: 'user@secureshop.edu',
     // كلمة المرور الافتراضية: User@123456
-    passwordHash: '04f8996da763b7a969b1028ee3007569eaf3a635486ddab211d512c85b9df8fb',
+    passwordHash: '1563ab57508234cbc48fb37ab8df3843f5767c3c062a9804e971341cc9d42b37',
     salt: 'salt_secureshop_user_2026',
     role: 'user',
     isConfirmed: true,
