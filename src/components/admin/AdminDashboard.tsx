@@ -39,7 +39,19 @@ export const AdminDashboard: React.FC = () => {
     setAuthModalTab
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'users' | 'coupons'>('overview');
+  const [activeTab, setActiveTabState] = useState<'overview' | 'products' | 'orders' | 'users' | 'coupons'>(() => {
+    const saved = localStorage.getItem('secureshop_admin_tab_v2');
+    const validTabs = ['overview', 'products', 'orders', 'users', 'coupons'];
+    if (saved && validTabs.includes(saved)) {
+      return saved as any;
+    }
+    return 'overview';
+  });
+
+  const setActiveTab = (tab: 'overview' | 'products' | 'orders' | 'users' | 'coupons') => {
+    setActiveTabState(tab);
+    localStorage.setItem('secureshop_admin_tab_v2', tab);
+  };
   const [showAddProductModal, setShowAddProductModal] = useState(false);
 
   // التحقق الأمني من صلاحيات المدير (RBAC Defense)

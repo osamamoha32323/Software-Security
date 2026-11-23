@@ -126,7 +126,9 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'secureshop_current_user_v2',
   COUPONS: 'secureshop_coupons_v2',
   SECURITY_MODE: 'secureshop_sec_mode_v2',
-  SECURITY_LOGS: 'secureshop_sec_logs_v2'
+  SECURITY_LOGS: 'secureshop_sec_logs_v2',
+  CURRENT_VIEW: 'secureshop_current_view_v2',
+  ADMIN_TAB: 'secureshop_admin_tab_v2'
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -255,8 +257,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return [];
   });
 
-  // حالات العرض والتنقل
-  const [currentView, setCurrentView] = useState<'store' | 'admin'>('store');
+  // حالات العرض والتنقل مع الحفظ عند إعادة تحميل الصفحة (Refresh)
+  const [currentView, setCurrentViewState] = useState<'store' | 'admin'>(() => {
+    if (localStorage.getItem('secureshop_logged_out') === 'true') {
+      return 'store';
+    }
+    const savedUserStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    if (!savedUserStr) {
+      return 'store';
+    }
+    const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_VIEW);
+    return (saved === 'admin' ? 'admin' : 'store');
+  });
+
+  const setCurrentView = (view: 'store' | 'admin') => {
+    setCurrentViewState(view);
+    localStorage.setItem(STORAGE_KEYS.CURRENT_VIEW, view);
+  };
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [rawSearchQuery, setRawSearchQuery] = useState('');
   const [searchWarning, setSearchWarning] = useState<string | null>(null);
@@ -901,6 +918,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('secureshop_logged_out', 'true');
     // 4. الانتقال لصفحة الهوم فوراً وإغلاق أي نوافذ منبثقة
     setCurrentView('store');
+    localStorage.setItem(STORAGE_KEYS.CURRENT_VIEW, 'store');
     setIsProfileOpen(false);
     setIsCartOpen(false);
     setIsCheckoutOpen(false);
