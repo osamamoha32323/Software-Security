@@ -27,8 +27,8 @@ export const AuthModal: React.FC = () => {
   } = useStore();
 
   // Login form state
-  const [loginEmail, setLoginEmail] = useState('user@secureshop.edu');
-  const [loginPassword, setLoginPassword] = useState('User@123456');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Register form state
   const [regName, setRegName] = useState('');
