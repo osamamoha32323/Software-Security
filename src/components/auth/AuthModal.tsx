@@ -63,6 +63,11 @@ export const AuthModal: React.FC = () => {
       if (res.success) {
         handleClose();
       } else {
+        if (res.error?.includes('تأكيد') || res.error?.includes('رمز')) {
+          setConfirmEmail(loginEmail);
+          setConfirmCode('');
+          setAuthModalTab('confirm');
+        }
         setError(res.error || 'فشل تسجيل الدخول');
       }
     } catch (err: any) {
@@ -95,8 +100,8 @@ export const AuthModal: React.FC = () => {
       const res = await registerUser(regName, regEmail, regPassword);
       if (res.success) {
         setConfirmEmail(regEmail);
-        setConfirmCode(res.confirmationCode || '123456');
-        setSuccessMsg(`تم إنشاء الحساب بنجاح! رمز التأكيد المرسل هو: ${res.confirmationCode}`);
+        setConfirmCode(''); // يظل الحقل فارغاً ولا يتم عرض الكود في الموقع
+        setSuccessMsg('تم إنشاء الحساب بنجاح! تم إرسال رمز التأكيد السري إلى التيرمينال (Terminal). يرجى إدخاله في المربع أدناه:');
         setAuthModalTab('confirm');
       } else {
         setError(res.error || 'فشل إنشاء الحساب');
@@ -425,63 +430,96 @@ export const AuthModal: React.FC = () => {
           </form>
         )}
 
-        {/* نموذج تأكيد الحساب */}
+        {/* نموذج تأكيد الحساب - المربع الصغير لإدخال الكود */}
         {authModalTab === 'confirm' && (
           <form onSubmit={handleConfirmSubmit}>
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                البريد الإلكتروني المراد تأكيده
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="email"
-                  className="search-input"
-                  style={{ width: '100%', paddingRight: '2.25rem', borderColor: 'var(--border-subtle)' }}
-                  placeholder="name@example.com"
-                  value={confirmEmail}
-                  onChange={(e) => setConfirmEmail(e.target.value)}
-                  required
-                />
-                <Mail size={16} color="var(--text-muted)" style={{ position: 'absolute', right: '12px', top: '12px' }} />
+            <div style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 'var(--radius-md)',
+              padding: '1rem',
+              marginBottom: '1.25rem',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.25rem 0.75rem',
+                background: '#e0e7ff',
+                color: '#3730a3',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                marginBottom: '0.5rem'
+              }}>
+                <Mail size={13} />
+                <span>البريد المراد تأكيده: {confirmEmail || 'الحساب الجديد'}</span>
               </div>
+              <p style={{ fontSize: '0.8rem', color: '#475569', margin: '0 0 0.5rem 0', lineHeight: 1.5 }}>
+                ⚡ تم توليد رمز التحقق السري وإرساله إلى شاشة <strong>التيرمينال (Terminal)</strong>.
+              </p>
+              <p style={{ fontSize: '0.75rem', color: '#64748b', margin: 0 }}>
+                (افتح شاشة Terminal وانسخ الرمز المكون من 6 أرقام ثم اكتبه في المربع بالأسفل)
+              </p>
             </div>
 
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                رمز التأكيد المكون من 6 أرقام (Account Confirmation Code)
+            <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 800, marginBottom: '0.65rem', color: 'var(--text-main)' }}>
+                أدخل رمز التأكيد (6 أرقام):
               </label>
-              <div style={{ position: 'relative' }}>
+              <div style={{ maxWidth: '280px', margin: '0 auto', position: 'relative' }}>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   className="search-input"
                   style={{ 
                     width: '100%', 
-                    paddingRight: '2.25rem', 
-                    borderColor: 'var(--border-subtle)',
-                    letterSpacing: '4px',
-                    fontWeight: 800,
-                    fontSize: '1.1rem'
+                    textAlign: 'center',
+                    borderColor: 'var(--primary)',
+                    letterSpacing: '10px',
+                    fontWeight: 900,
+                    fontSize: '1.6rem',
+                    padding: '0.75rem 0.5rem',
+                    background: '#ffffff',
+                    boxShadow: '0 4px 12px rgba(37,99,235,0.12)',
+                    borderRadius: 'var(--radius-md)'
                   }}
-                  placeholder="123456"
+                  placeholder="••••••"
                   maxLength={6}
                   value={confirmCode}
-                  onChange={(e) => setConfirmCode(e.target.value)}
+                  onChange={(e) => setConfirmCode(e.target.value.replace(/\D/g, ''))}
+                  autoFocus
                   required
                 />
-                <KeyRound size={18} color="var(--primary)" style={{ position: 'absolute', right: '12px', top: '12px' }} />
               </div>
-              <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
-                * يمكنك استخدام رمز التأكيد التجريبي: 123456
-              </span>
             </div>
 
             <button
               type="submit"
               className="btn btn-primary"
-              style={{ width: '100%', padding: '0.85rem', fontWeight: 800 }}
+              style={{ width: '100%', padding: '0.85rem', fontWeight: 800, fontSize: '0.95rem' }}
             >
               تأكيد وتفعيل الحساب الآن
             </button>
+
+            <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+              <button
+                type="button"
+                onClick={() => { setAuthModalTab('login'); setError(null); }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline'
+                }}
+              >
+                العودة إلى تسجيل الدخول
+              </button>
+            </div>
           </form>
         )}
       </div>

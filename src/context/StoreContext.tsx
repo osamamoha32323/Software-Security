@@ -593,9 +593,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // فحص تأكيد الحساب
     if (!user.isConfirmed) {
+      // إرسال الكود إلى التيرمينال ليتمكن المستخدم من تأكيده
+      try {
+        fetch('/api/terminal-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: user.name,
+            email: user.email,
+            code: user.confirmationCode
+          })
+        }).catch(() => {});
+      } catch (e) {}
+
       return {
         success: false,
-        error: 'هذا الحساب لم يتم تأكيده بعد! يرجى إدخال رمز التأكيد أولاً لتفعيله.'
+        error: 'هذا الحساب لم يتم تأكيده بعد! تم إرسال رمز التأكيد إلى التيرمينال، يرجى كتابة الرمز لتفعيله.'
       };
     }
 
@@ -642,6 +655,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const passwordHash = await hashPasswordSecure(password, salt);
     const confirmationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
+    // إرسال وطباعة رمز التأكيد في التيرمينال
+    try {
+      fetch('/api/terminal-log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: cleanEmail,
+          code: confirmationCode
+        })
+      }).catch(() => {});
+    } catch (e) {}
+
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: name.trim(),
@@ -659,8 +685,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUsers(prev => [...prev, newUser]);
 
     return {
-      success: true,
-      confirmationCode
+      success: true
     };
   };
 
@@ -673,8 +698,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return { success: false, error: 'البريد الإلكتروني غير مسجل' };
     }
 
-    if (user.confirmationCode !== cleanCode && cleanCode !== '123456') {
-      return { success: false, error: 'رمز التأكيد غير صحيح! يرجى التأكد من الرمز المدخل' };
+    if (user.confirmationCode !== cleanCode) {
+      return { success: false, error: 'رمز التأكيد غير صحيح! يرجى التأكد من الرمز المطبوع في التيرمينال' };
     }
 
     const confirmedUser = { ...user, isConfirmed: true };
