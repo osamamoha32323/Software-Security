@@ -3,6 +3,7 @@ import { Product, CartItem, Order, OrderStatus, AdminKPIs } from '../types/ecomm
 import { User } from '../types/auth';
 import { Coupon } from '../types/coupon';
 import { SecurityMode, SecurityLog } from '../types/security';
+import { dbService } from '../services/supabaseService';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS } from '../data/initialProducts';
 import { INITIAL_USERS, INITIAL_COUPONS } from '../data/initialSecurityData';
 import {
@@ -306,6 +307,49 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem(STORAGE_KEYS.SECURITY_LOGS, JSON.stringify(securityLogs));
   }, [securityLogs]);
 
+  // مزامنة فورية مع قاعدة بيانات Supabase الحية عند بدء التطبيق
+  useEffect(() => {
+    let isMounted = true;
+
+    async function syncSupabase() {
+      try {
+        const [remoteProducts, remoteUsers, remoteCoupons, remoteOrders] = await Promise.all([
+          dbService.getProducts(),
+          dbService.getUsers(),
+          dbService.getCoupons(),
+          dbService.getOrders()
+        ]);
+
+        if (!isMounted) return;
+
+        if (remoteProducts && remoteProducts.length > 0) {
+          setProducts(remoteProducts);
+          localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(remoteProducts));
+        }
+
+        if (remoteUsers && remoteUsers.length > 0) {
+          setUsers(remoteUsers);
+          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(remoteUsers));
+        }
+
+        if (remoteCoupons && remoteCoupons.length > 0) {
+          setCoupons(remoteCoupons);
+          localStorage.setItem(STORAGE_KEYS.COUPONS, JSON.stringify(remoteCoupons));
+        }
+
+        if (remoteOrders && remoteOrders.length > 0) {
+          setOrders(remoteOrders);
+          localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(remoteOrders));
+        }
+      } catch (e) {
+        console.warn('Initial Supabase fetch:', e);
+      }
+    }
+
+    syncSupabase();
+    return () => { isMounted = false; };
+  }, []);
+
   // إدارة سجلات الأمان
   const addSecurityLog = (logData: Omit<SecurityLog, 'id' | 'timestamp' | 'mode'>) => {
     const newLog: SecurityLog = {
@@ -315,6 +359,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       mode: securityMode
     };
     setSecurityLogs(prev => [newLog, ...prev.slice(0, 49)]); // الاحتفاظ بآخر 50 حدث
+    dbService.logSecurityEvent(newLog).catch(() => {});
   };
 
   const clearSecurityLogs = () => {
@@ -360,6 +405,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       isActive: true
     };
     setProducts(prev => [newProduct, ...prev]);
+    dbService.upsertProduct(newProduct).catch(console.error);
   };
 
   const updateProduct = (updated: Product) => {
@@ -367,6 +413,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (selectedProduct?.id === updated.id) {
       setSelectedProduct(updated);
     }
+    dbService.upsertProduct(updated).catch(console.error);
   };
 
   const deleteProduct = (productId: string) => {
@@ -374,10 +421,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (selectedProduct?.id === productId) {
       setSelectedProduct(null);
     }
+    dbService.deleteProduct(productId).catch(console.error);
   };
 
   const toggleProductActive = (productId: string) => {
-    setProducts(prev => prev.map(p => (p.id === productId ? { ...p, isActive: !p.isActive } : p)));
+    setProducts(prev => prev.map(p => {
+      if (p.id === productId) {
+        const updated = { ...p, isActive: !p.isActive };
+        dbService.upsertProduct(updated).catch(console.error);
+        return updated;
+      }
+      return p;
+    }));
   };
 
   // إدارة السلة
@@ -549,15 +604,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       usedByUsers: []
     };
     setCoupons(prev => [newCoupon, ...prev]);
+    dbService.upsertCoupon(newCoupon).catch(console.error);
   };
 
   const deleteCoupon = (id: string) => {
     setCoupons(prev => prev.filter(c => c.id !== id));
     if (activeCoupon?.id === id) setActiveCoupon(null);
+    dbService.deleteCoupon(id).catch(console.error);
   };
 
   const toggleCouponActive = (id: string) => {
-    setCoupons(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c));
+    setCoupons(prev => prev.map(c => {
+      if (c.id === id) {
+        const updated = { ...c, isActive: !c.isActive };
+        dbService.upsertCoupon(updated).catch(console.error);
+        return updated;
+      }
+      return c;
+    }));
   };
 
   // النشرة البريدية
@@ -758,6 +822,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers));
+    dbService.upsertUser(newUser).catch(console.error);
 
     return {
       success: true
@@ -777,7 +842,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return { success: false, error: 'رمز التأكيد غير صحيح! يرجى التأكد من الرمز المطبوع في التيرمينال' };
     }
 
-    // تأكيد الحساب نهائياً وحفظه فوراً في LocalStorage
+    // تأكيد الحساب نهائياً وحفظه فوراً في LocalStorage و Supabase
     const confirmedUser: User = { ...user, isConfirmed: true, failedAttempts: 0, isLocked: false };
     const updatedUsers = users.map(u => u.id === user.id ? confirmedUser : u);
     setUsers(updatedUsers);
@@ -785,6 +850,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setCurrentUser(confirmedUser);
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(confirmedUser));
     localStorage.removeItem('secureshop_logged_out');
+    dbService.upsertUser(confirmedUser).catch(console.error);
 
     const userCartKey = `secureshop_cart_user_${user.id}`;
     const savedUserCart = localStorage.getItem(userCartKey);
@@ -836,6 +902,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updated = { ...currentUser, ...data };
     setCurrentUser(updated);
     setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
+    dbService.upsertUser(updated).catch(console.error);
   };
 
   const changePassword = async (oldPass: string, newPass: string): Promise<{ success: boolean; error?: string }> => {
@@ -856,6 +923,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updated = { ...currentUser, salt: newSalt, passwordHash: newHash };
     setCurrentUser(updated);
     setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
+    dbService.upsertUser(updated).catch(console.error);
 
     return { success: true };
   };
@@ -865,21 +933,43 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updated = { ...currentUser, storeCredit: Math.max(0, currentUser.storeCredit + amount) };
     setCurrentUser(updated);
     setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
+    dbService.upsertUser(updated).catch(console.error);
   };
 
   const updateUserRole = (userId: string, role: 'user' | 'admin') => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const updated = { ...u, role };
+        dbService.upsertUser(updated).catch(console.error);
+        return updated;
+      }
+      return u;
+    }));
     if (currentUser?.id === userId) {
       setCurrentUser(prev => prev ? { ...prev, role } : null);
     }
   };
 
   const toggleUserStatus = (userId: string) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, isConfirmed: !u.isConfirmed } : u));
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const updated = { ...u, isConfirmed: !u.isConfirmed };
+        dbService.upsertUser(updated).catch(console.error);
+        return updated;
+      }
+      return u;
+    }));
   };
 
   const updateUserCredit = (userId: string, newCredit: number) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, storeCredit: newCredit } : u));
+    setUsers(prev => prev.map(u => {
+      if (u.id === userId) {
+        const updated = { ...u, storeCredit: newCredit };
+        dbService.upsertUser(updated).catch(console.error);
+        return updated;
+      }
+      return u;
+    }));
     if (currentUser?.id === userId) {
       setCurrentUser(prev => prev ? { ...prev, storeCredit: newCredit } : null);
     }
@@ -910,6 +1000,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const updatedUser = { ...currentUser, storeCredit: newCredit };
       setCurrentUser(updatedUser);
       setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+      dbService.upsertUser(updatedUser).catch(console.error);
     }
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -931,12 +1022,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // تسجيل استخدام الكوبون لمنع إعادة الاستخدام
     if (activeCoupon && currentUser) {
-      setCoupons(prev => prev.map(c =>
-        c.id === activeCoupon.id ? { ...c, usedByUsers: [...c.usedByUsers, currentUser.id] } : c
-      ));
+      const updatedCoupon = { ...activeCoupon, usedByUsers: [...activeCoupon.usedByUsers, currentUser.id] };
+      setCoupons(prev => prev.map(c => c.id === activeCoupon.id ? updatedCoupon : c));
+      dbService.upsertCoupon(updatedCoupon).catch(console.error);
     }
 
     setOrders(prev => [newOrder, ...prev]);
+    dbService.upsertOrder(newOrder).catch(console.error);
     clearCart();
 
     // تقليل المخزون
@@ -945,7 +1037,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const itemOrdered = orderData.items.find(i => i.product.id === prod.id);
         if (itemOrdered) {
           const newStock = Math.max(0, prod.stock - itemOrdered.quantity);
-          return { ...prod, stock: newStock };
+          const updated = { ...prod, stock: newStock };
+          dbService.upsertProduct(updated).catch(console.error);
+          return updated;
         }
         return prod;
       })
@@ -958,7 +1052,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setOrders(prev =>
       prev.map(order => {
         if (order.id === orderId) {
-          return {
+          const updated = {
             ...order,
             status,
             statusHistory: [
@@ -966,6 +1060,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               { status, timestamp: new Date().toISOString(), note }
             ]
           };
+          dbService.upsertOrder(updated).catch(console.error);
+          return updated;
         }
         return order;
       })
