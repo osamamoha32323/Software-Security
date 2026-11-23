@@ -21,7 +21,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     addToCart, 
     openCheckoutWithSingleProduct, 
     wishlist, 
-    toggleWishlist 
+    toggleWishlist,
+    currentUser 
   } = useStore();
 
   const isWishlisted = wishlist.includes(product.id);
@@ -112,27 +113,46 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         {/* أزرار الإجراء السريع */}
-        <div className="card-actions">
-          {/* زر الشراء المباشر الفوري */}
+        {currentUser?.role === 'admin' ? (
           <button 
-            className="btn btn-card-buy flex items-center justify-center gap-1"
-            onClick={() => openCheckoutWithSingleProduct(product, 1)}
-            title="اطلب الآن والدفع عند الاستلام"
+            className="btn btn-outline"
+            style={{ 
+              width: '100%', 
+              fontSize: '0.8rem', 
+              padding: '0.45rem', 
+              color: '#0369a1', 
+              borderColor: '#bae6fd', 
+              background: '#f0f9ff',
+              fontWeight: 700
+            }}
+            onClick={() => setSelectedProduct(product)}
+            title="معاينة تفاصيل المنتج (عرض الإشراف)"
           >
-            <Zap size={15} fill="currentColor" />
-            <span>اشتري الآن</span>
+            <span>معاينة تفاصيل المنتج 👁️</span>
           </button>
+        ) : (
+          <div className="card-actions">
+            {/* زر الشراء المباشر الفوري */}
+            <button 
+              className="btn btn-card-buy flex items-center justify-center gap-1"
+              onClick={() => openCheckoutWithSingleProduct(product, 1)}
+              title="اطلب الآن والدفع عند الاستلام"
+            >
+              <Zap size={15} fill="currentColor" />
+              <span>اشتري الآن</span>
+            </button>
 
-          {/* زر إضافة للسلة */}
-          <button 
-            className="btn btn-card-cart flex items-center justify-center gap-1"
-            onClick={() => addToCart(product, 1)}
-            title="إضافة المنتج لسلة المشتريات"
-          >
-            <ShoppingBag size={15} />
-            <span>أضف للسلة</span>
-          </button>
-        </div>
+            {/* زر إضافة للسلة */}
+            <button 
+              className="btn btn-card-cart flex items-center justify-center gap-1"
+              onClick={() => addToCart(product, 1)}
+              title="إضافة المنتج لسلة المشتريات"
+            >
+              <ShoppingBag size={15} />
+              <span>أضف للسلة</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

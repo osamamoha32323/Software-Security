@@ -130,36 +130,55 @@ export const UserProfileModal: React.FC = () => {
           </button>
         </div>
 
-        {/* بطاقة رصيد المتجر (Store Credit) */}
-        <div style={{
-          background: 'linear-gradient(135deg, #1e293b, #0f172a)',
-          color: '#ffffff',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1.25rem',
-          marginBottom: '1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Wallet size={15} color="#38bdf8" />
-              <span>رصيد المتجر المتاح للشراء (Store Credit)</span>
+        {/* بطاقة رصيد المتجر للعملاء أو بطاقة صلاحيات الإدارة للأدمن */}
+        {currentUser.role === 'admin' ? (
+          <div style={{
+            background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+            color: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.25rem',
+            marginBottom: '1.25rem',
+            border: '1px solid #334155'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+              <ShieldCheck size={18} color="#38bdf8" />
+              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#38bdf8' }}>صلاحية الإشراف الكامل (Super Administrator)</span>
             </div>
-            <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#38bdf8', marginTop: '4px' }}>
-              {formatEGP(currentUser.storeCredit)}
-            </div>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0, lineHeight: 1.6 }}>
+              حساب الإدارة مخصص لإدارة المنتجات، المستخدمين، الكوبونات ومراجعة السجلات الأمنية عبر لوحة الإدارة. الحساب غير مخصص للشراء ولا يحتوي على رصيد متجر أو سلة مشتريات.
+            </p>
           </div>
-          <button
-            className="btn btn-sm"
-            style={{ background: '#38bdf8', color: '#0f172a', fontWeight: 800, borderRadius: 'var(--radius-full)' }}
-            onClick={() => addStoreCredit(500)}
-            title="إضافة 500 ج.م لرصيد المتجر للاختبار التجريبي"
-          >
-            <PlusCircle size={15} />
-            <span>شحن +500 ج.م (Demo)</span>
-          </button>
-        </div>
+        ) : (
+          <div style={{
+            background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+            color: '#ffffff',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.25rem',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div>
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Wallet size={15} color="#38bdf8" />
+                <span>رصيد المتجر المتاح للشراء (Store Credit)</span>
+              </div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#38bdf8', marginTop: '4px' }}>
+                {formatEGP(currentUser.storeCredit)}
+              </div>
+            </div>
+            <button
+              className="btn btn-sm"
+              style={{ background: '#38bdf8', color: '#0f172a', fontWeight: 800, borderRadius: 'var(--radius-full)' }}
+              onClick={() => addStoreCredit(500)}
+              title="إضافة 500 ج.م لرصيد المتجر للاختبار التجريبي"
+            >
+              <PlusCircle size={15} />
+              <span>شحن +500 ج.م (Demo)</span>
+            </button>
+          </div>
+        )}
 
         {/* تبويبات الشاشة */}
         <div style={{
@@ -180,21 +199,23 @@ export const UserProfileModal: React.FC = () => {
           >
             البيانات والعنوان
           </button>
-          <button
-            style={{
-              padding: '0.65rem 0.5rem',
-              fontWeight: 700,
-              fontSize: '0.875rem',
-              borderBottom: activeTab === 'orders' ? '2px solid var(--primary)' : 'none',
-              color: activeTab === 'orders' ? 'var(--primary)' : 'var(--text-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-            onClick={() => setActiveTab('orders')}
-          >
-            <span>طلباتي ({userOrders.length})</span>
-          </button>
+          {currentUser.role !== 'admin' && (
+            <button
+              style={{
+                padding: '0.65rem 0.5rem',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                borderBottom: activeTab === 'orders' ? '2px solid var(--primary)' : 'none',
+                color: activeTab === 'orders' ? 'var(--primary)' : 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              onClick={() => setActiveTab('orders')}
+            >
+              <span>طلباتي ({userOrders.length})</span>
+            </button>
+          )}
           <button
             style={{
               padding: '0.65rem 0.5rem',

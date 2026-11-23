@@ -73,6 +73,93 @@ export const CheckoutModal: React.FC = () => {
 
   if (!isCheckoutOpen) return null;
 
+  if (!currentUser) {
+    return (
+      <div className="modal-backdrop" onClick={() => setIsCheckoutOpen(false)}>
+        <div 
+          className="modal-container"
+          style={{ maxWidth: '440px', padding: '2rem', textAlign: 'center' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button className="modal-close-btn" onClick={() => setIsCheckoutOpen(false)}>
+            <X size={20} />
+          </button>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            background: '#eff6ff',
+            color: '#2563eb',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem'
+          }}>
+            <User size={30} />
+          </div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+            تسجيل الدخول مطلوب للشراء
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            عذراً، لا يمكنك متابعة إتمام الطلب إلا بعد تسجيل الدخول أو إنشاء حساب جديد لحفظ بيانات الشحن وسجل الطلبات.
+          </p>
+          <button
+            className="btn btn-primary"
+            style={{ width: '100%', padding: '0.85rem', fontWeight: 800 }}
+            onClick={() => {
+              setIsCheckoutOpen(false);
+              setIsAuthModalOpen(true);
+            }}
+          >
+            تسجيل الدخول / إنشاء حساب
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentUser.role === 'admin') {
+    return (
+      <div className="modal-backdrop" onClick={() => setIsCheckoutOpen(false)}>
+        <div 
+          className="modal-container"
+          style={{ maxWidth: '440px', padding: '2rem', textAlign: 'center' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button className="modal-close-btn" onClick={() => setIsCheckoutOpen(false)}>
+            <X size={20} />
+          </button>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            background: '#fee2e2',
+            color: '#ef4444',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1rem'
+          }}>
+            <ShieldCheck size={30} />
+          </div>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem', color: '#b91c1c' }}>
+            تنبيه صلاحيات الإدارة
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+            حساب الأدمن مخصص لإدارة المتجر ومتابعة الطلبات فقط، ولا يمكن استخدام هذا الحساب لإجراء طلبات شراء.
+          </p>
+          <button
+            className="btn btn-outline"
+            style={{ width: '100%', padding: '0.85rem', fontWeight: 800 }}
+            onClick={() => setIsCheckoutOpen(false)}
+          >
+            إغلاق
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // جلب معلومات المحافظة وسعر الشحن
   const currentGov = EGYPT_GOVERNORATES.find(g => g.id === selectedGovId) || EGYPT_GOVERNORATES[0];
   const shippingCost = currentGov.shippingCost;

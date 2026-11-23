@@ -137,11 +137,13 @@ export const Footer: React.FC = () => {
               <li>
                 <a href="#categories-section" style={{ transition: 'color 0.2s' }}>تصفح كافة الأقسام</a>
               </li>
-              <li>
-                <button onClick={() => setIsTrackingOpen(true)} style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  تتبع حالة شحنتك
-                </button>
-              </li>
+              {currentUser?.role !== 'admin' && (
+                <li>
+                  <button onClick={() => setIsTrackingOpen(true)} style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    تتبع حالة شحنتك
+                  </button>
+                </li>
+              )}
               {currentUser?.role === 'admin' && (
                 <li>
                   <button onClick={() => setCurrentView('admin')} style={{ color: '#38bdf8', fontWeight: 700 }}>

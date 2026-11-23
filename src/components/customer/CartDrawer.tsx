@@ -22,10 +22,13 @@ export const CartDrawer: React.FC = () => {
     updateCartQuantity, 
     removeFromCart, 
     clearCart,
-    setIsCheckoutOpen 
+    setIsCheckoutOpen,
+    currentUser,
+    setIsAuthModalOpen,
+    setAuthModalTab 
   } = useStore();
 
-  if (!isCartOpen) return null;
+  if (!isCartOpen || currentUser?.role === 'admin') return null;
 
   return (
     <>
@@ -214,6 +217,13 @@ export const CartDrawer: React.FC = () => {
               className="btn btn-emerald btn-lg flex items-center justify-center gap-2"
               style={{ width: '100%' }}
               onClick={() => {
+                if (!currentUser) {
+                  alert('عذراً، لا يمكنك متابعة إتمام الطلب إلا بعد تسجيل الدخول أو إنشاء حساب جديد أولاً.');
+                  setIsCartOpen(false);
+                  setIsAuthModalOpen(true);
+                  setAuthModalTab('login');
+                  return;
+                }
                 setIsCartOpen(false);
                 setIsCheckoutOpen(true);
               }}

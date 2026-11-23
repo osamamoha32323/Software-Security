@@ -21,7 +21,8 @@ export const ProductDetailModal: React.FC = () => {
     selectedProduct, 
     setSelectedProduct, 
     addToCart, 
-    openCheckoutWithSingleProduct 
+    openCheckoutWithSingleProduct,
+    currentUser 
   } = useStore();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -200,60 +201,80 @@ export const ProductDetailModal: React.FC = () => {
               </div>
             )}
 
-            {/* عداد الكمية وأزرار الشراء */}
+            {/* عداد الكمية وأزرار الشراء أو رسالة وضع الإدارة */}
             <div style={{ marginTop: 'auto', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
-              <div className="flex items-center gap-3" style={{ marginBottom: '1rem' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>الكمية:</span>
-                <div className="flex items-center" style={{ 
-                  border: '1.5px solid var(--border-color)', 
-                  borderRadius: 'var(--radius-md)', 
-                  overflow: 'hidden',
-                  background: 'var(--bg-card)'
+              {currentUser?.role === 'admin' ? (
+                <div style={{
+                  background: '#f0f9ff',
+                  border: '1px solid #bae6fd',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '1.25rem',
+                  textAlign: 'center'
                 }}>
-                  <button 
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    style={{ padding: '0.4rem 0.75rem', background: 'var(--bg-subtle)' }}
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <span style={{ width: '40px', textAlign: 'center', fontWeight: 800 }}>{quantity}</span>
-                  <button 
-                    onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))}
-                    style={{ padding: '0.4rem 0.75rem', background: 'var(--bg-subtle)' }}
-                  >
-                    <Plus size={16} />
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: '#0369a1', fontWeight: 800, marginBottom: '0.4rem' }}>
+                    <ShieldCheck size={20} />
+                    <span>وضع معاينة الإدارة (Admin View Only)</span>
+                  </div>
+                  <p style={{ fontSize: '0.825rem', color: '#0284c7', margin: 0, lineHeight: 1.6 }}>
+                    حساب المدير مخصص لإدارة المنتجات والمخزون ولا يمكن استخدامه لإجراء عمليات الشراء أو إضافة منتجات للسلة.
+                  </p>
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  (المتوفر: {selectedProduct.stock} قطعة)
-                </span>
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3" style={{ marginBottom: '1rem' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>الكمية:</span>
+                    <div className="flex items-center" style={{ 
+                      border: '1.5px solid var(--border-color)', 
+                      borderRadius: 'var(--radius-md)', 
+                      overflow: 'hidden',
+                      background: 'var(--bg-card)'
+                    }}>
+                      <button 
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                        style={{ padding: '0.4rem 0.75rem', background: 'var(--bg-subtle)' }}
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <span style={{ width: '40px', textAlign: 'center', fontWeight: 800 }}>{quantity}</span>
+                      <button 
+                        onClick={() => setQuantity(Math.min(selectedProduct.stock, quantity + 1))}
+                        style={{ padding: '0.4rem 0.75rem', background: 'var(--bg-subtle)' }}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      (المتوفر: {selectedProduct.stock} قطعة)
+                    </span>
+                  </div>
 
-              <div className="flex flex-col gap-2">
-                <button
-                  className="btn btn-emerald btn-lg flex items-center justify-center gap-2"
-                  onClick={() => {
-                    openCheckoutWithSingleProduct(selectedProduct, quantity);
-                    setSelectedProduct(null);
-                  }}
-                  style={{ width: '100%' }}
-                >
-                  <Zap size={20} fill="currentColor" />
-                  <span>اطلب الآن — الدفع عند الاستلام ({formatEGP(selectedProduct.sellingPrice * quantity)})</span>
-                </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      className="btn btn-emerald btn-lg flex items-center justify-center gap-2"
+                      onClick={() => {
+                        openCheckoutWithSingleProduct(selectedProduct, quantity);
+                        setSelectedProduct(null);
+                      }}
+                      style={{ width: '100%' }}
+                    >
+                      <Zap size={20} fill="currentColor" />
+                      <span>اطلب الآن — الدفع عند الاستلام ({formatEGP(selectedProduct.sellingPrice * quantity)})</span>
+                    </button>
 
-                <button
-                  className="btn btn-outline flex items-center justify-center gap-2"
-                  onClick={() => {
-                    addToCart(selectedProduct, quantity);
-                    setSelectedProduct(null);
-                  }}
-                  style={{ width: '100%', padding: '0.75rem' }}
-                >
-                  <ShoppingBag size={18} />
-                  <span>إضافة إلى سلة المشتريات</span>
-                </button>
-              </div>
+                    <button
+                      className="btn btn-outline flex items-center justify-center gap-2"
+                      onClick={() => {
+                        addToCart(selectedProduct, quantity);
+                        setSelectedProduct(null);
+                      }}
+                      style={{ width: '100%', padding: '0.75rem' }}
+                    >
+                      <ShoppingBag size={18} />
+                      <span>إضافة إلى سلة المشتريات</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

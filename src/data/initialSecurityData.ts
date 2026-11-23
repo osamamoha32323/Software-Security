@@ -12,7 +12,7 @@ export const INITIAL_USERS: User[] = [
     role: 'admin',
     isConfirmed: true,
     confirmationCode: '999999',
-    storeCredit: 10000,
+    storeCredit: 0,
     phone: '01000000001',
     city: 'القاهرة',
     address: 'جامعة السويدي التكنولوجية، فرع الهندسة',

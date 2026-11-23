@@ -56,7 +56,7 @@ export const OrderTrackingModal: React.FC = () => {
     }
   }, [trackingOrderId, isTrackingOpen]);
 
-  if (!isTrackingOpen) return null;
+  if (!isTrackingOpen || currentUser?.role === 'admin') return null;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

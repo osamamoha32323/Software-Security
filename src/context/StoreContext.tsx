@@ -353,6 +353,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // إدارة السلة
   const addToCart = (product: Product, quantity = 1) => {
+    // 1. فحص تسجيل الدخول: منع الزائر غير المسجل من إضافة منتجات للسلة أو الشراء
+    if (!currentUser) {
+      alert('عذراً، لا يمكنك إضافة منتجات للسلة أو الشراء إلا بعد تسجيل الدخول أو إنشاء حساب جديد أولاً.');
+      setIsAuthModalOpen(true);
+      setAuthModalTab('login');
+      return;
+    }
+
+    // 2. فحص صلاحية الإدارة: منع الأدمن من الشراء أو إضافة منتجات للسلة (الأدمن للإدارة فقط)
+    if (currentUser.role === 'admin') {
+      alert('حساب الإدارة مخصص لإدارة ومتابعة المتجر فقط، ولا يمكن استخدامه لإضافة منتجات للسلة أو الشراء.');
+      return;
+    }
+
     const validation = validateCartQuantity(quantity, product.stock, securityMode);
     if (!validation.valid && securityMode === 'secure') {
       addSecurityLog({
@@ -432,6 +446,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const openCheckoutWithSingleProduct = (product: Product, quantity = 1) => {
+    if (!currentUser) {
+      alert('عذراً، لا يمكنك إتمام الشراء إلا بعد تسجيل الدخول أو إنشاء حساب جديد أولاً.');
+      setIsAuthModalOpen(true);
+      setAuthModalTab('login');
+      return;
+    }
+
+    if (currentUser.role === 'admin') {
+      alert('حساب الإدارة مخصص لإدارة ومتابعة المتجر فقط، ولا يمكن استخدامه لإجراء عمليات الشراء.');
+      return;
+    }
+
     addToCart(product, quantity);
     setIsCartOpen(false);
     setIsCheckoutOpen(true);

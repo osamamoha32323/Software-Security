@@ -39,31 +39,35 @@ export const MobileBottomNav: React.FC = () => {
         <span>الأقسام</span>
       </button>
 
-      <button 
-        className="mobile-nav-item"
-        onClick={() => setIsCartOpen(true)}
-      >
-        <div style={{ position: 'relative' }}>
-          <ShoppingBag size={20} />
-          {cartCount > 0 && (
-            <span 
-              className="cart-badge" 
-              style={{ top: '-6px', right: '-8px', left: 'auto', width: '17px', height: '17px', fontSize: '0.65rem' }}
-            >
-              {cartCount}
-            </span>
-          )}
-        </div>
-        <span>السلة</span>
-      </button>
+      {currentUser?.role !== 'admin' && (
+        <>
+          <button 
+            className="mobile-nav-item"
+            onClick={() => setIsCartOpen(true)}
+          >
+            <div style={{ position: 'relative' }}>
+              <ShoppingBag size={20} />
+              {cartCount > 0 && (
+                <span 
+                  className="cart-badge" 
+                  style={{ top: '-6px', right: '-8px', left: 'auto', width: '17px', height: '17px', fontSize: '0.65rem' }}
+                >
+                  {cartCount}
+                </span>
+              )}
+            </div>
+            <span>السلة</span>
+          </button>
 
-      <button 
-        className="mobile-nav-item"
-        onClick={() => setIsTrackingOpen(true)}
-      >
-        <Truck size={20} />
-        <span>تتبع طلبك</span>
-      </button>
+          <button 
+            className="mobile-nav-item"
+            onClick={() => setIsTrackingOpen(true)}
+          >
+            <Truck size={20} />
+            <span>تتبع طلبك</span>
+          </button>
+        </>
+      )}
 
       {currentUser?.role === 'admin' && (
         <button 
