@@ -237,7 +237,7 @@ export const UserProfileModal: React.FC = () => {
         {/* تبويب تعديل الملف الشخصي */}
         {activeTab === 'profile' && (
           <form onSubmit={handleUpdateProfile}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-grid-2" style={{ marginBottom: '1rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, marginBottom: '0.35rem' }}>الاسم بالكامل</label>
                 <input
@@ -262,7 +262,7 @@ export const UserProfileModal: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+            <div className="form-grid-2" style={{ marginBottom: '1.25rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, marginBottom: '0.35rem' }}>المدينة / المنطقة</label>
                 <input

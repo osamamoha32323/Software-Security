@@ -59,7 +59,7 @@ export const Navbar: React.FC = () => {
               }}>
                 CET431 Security Lab
               </span>
-              <span>
+              <span className="top-banner-desc">
                 نظام متجر إلكتروني آمن ومحمي ضد ثغرات XSS, SQLi, IDOR, Broken Auth & Privilege Escalation
               </span>
             </div>
