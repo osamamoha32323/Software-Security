@@ -14,12 +14,13 @@ import {
   DollarSign, 
   Eye, 
   X,
-  FileText
+  FileText,
+  Trash2
 } from 'lucide-react';
 import { formatEGP, formatArabicDate, getOrderStatusInfo, createWhatsAppOrderLink } from '../../utils/formatters';
 
 export const OrderManager: React.FC = () => {
-  const { orders, updateOrderStatus } = useStore();
+  const { orders, updateOrderStatus, deleteOrder } = useStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -248,6 +249,20 @@ export const OrderManager: React.FC = () => {
                           >
                             <Eye size={16} />
                           </button>
+
+                          {/* زر مسح الطلب */}
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`هل أنت متأكد من حذف الطلب رقم ${order.id} للعميل "${order.customerName}" نهائياً؟`)) {
+                                deleteOrder(order.id);
+                              }
+                            }}
+                            className="btn btn-ghost btn-sm"
+                            style={{ padding: '4px 8px', color: '#ef4444' }}
+                            title="مسح وحذف هذا الطلب نهائياً"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -386,6 +401,20 @@ export const OrderManager: React.FC = () => {
                 <MessageCircle size={18} />
                 <span>مراسلة وتأكيد مع العميل واتساب</span>
               </a>
+
+              <button 
+                className="btn btn-outline"
+                style={{ color: '#ef4444', borderColor: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px' }}
+                onClick={() => {
+                  if (window.confirm(`هل أنت متأكد من مسح الطلب رقم ${selectedOrderDetails.id} نهائياً؟`)) {
+                    deleteOrder(selectedOrderDetails.id);
+                    setSelectedOrderDetails(null);
+                  }
+                }}
+              >
+                <Trash2 size={16} />
+                <span>مسح الطلب</span>
+              </button>
 
               <button 
                 className="btn btn-outline"

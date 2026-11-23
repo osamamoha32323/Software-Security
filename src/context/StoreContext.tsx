@@ -53,6 +53,7 @@ interface StoreContextType {
   orders: Order[];
   createOrder: (orderData: Omit<Order, 'id' | 'createdAt' | 'statusHistory' | 'status'>) => Order | null;
   updateOrderStatus: (orderId: string, status: OrderStatus, note?: string) => void;
+  deleteOrder: (orderId: string) => { success: boolean; error?: string };
   getOrderById: (orderId: string) => { order?: Order; error?: string };
   getOrdersByPhone: (phone: string) => Order[];
   isTrackingOpen: boolean;
@@ -1116,6 +1117,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   };
 
+  const deleteOrder = (orderId: string) => {
+    setOrders(prev => prev.filter(order => order.id !== orderId));
+    dbService.deleteOrder(orderId).catch(console.error);
+    return { success: true };
+  };
+
   // استرجاع الطلب مع حماية IDOR
   const getOrderById = (orderId: string): { order?: Order; error?: string } => {
     const cleanId = orderId.trim().toUpperCase();
@@ -1212,6 +1219,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         orders,
         createOrder,
         updateOrderStatus,
+        deleteOrder,
         getOrderById,
         getOrdersByPhone,
         isTrackingOpen,

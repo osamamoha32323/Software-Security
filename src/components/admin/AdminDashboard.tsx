@@ -10,7 +10,6 @@ import {
   Clock, 
   AlertTriangle, 
   PlusCircle, 
-  Calculator, 
   Store, 
   RotateCcw,
   Sparkles,
@@ -26,7 +25,6 @@ import { ProductManager } from './ProductManager';
 import { OrderManager } from './OrderManager';
 import { UserManager } from './UserManager';
 import { CouponManager } from './CouponManager';
-import { TaagerProfitCalculator } from './TaagerProfitCalculator';
 
 export const AdminDashboard: React.FC = () => {
   const { 
@@ -41,7 +39,7 @@ export const AdminDashboard: React.FC = () => {
     setAuthModalTab
   } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'users' | 'coupons' | 'calculator'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'users' | 'coupons'>('overview');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
 
   // التحقق الأمني من صلاحيات المدير (RBAC Defense)
@@ -239,14 +237,6 @@ export const AdminDashboard: React.FC = () => {
                 <ShoppingBag size={16} />
                 <span>إدارة المنتجات ({adminKPIs.totalProductsCount})</span>
               </button>
-
-              <button
-                className={`admin-tab-btn ${activeTab === 'calculator' ? 'active' : ''}`}
-                onClick={() => setActiveTab('calculator')}
-              >
-                <Calculator size={16} />
-                <span>حاسبة أرباح تاجر 🧮</span>
-              </button>
             </div>
           </div>
         </div>
@@ -437,9 +427,6 @@ export const AdminDashboard: React.FC = () => {
             setShowAddModal={setShowAddProductModal} 
           />
         )}
-
-        {/* تبويب حاسبة أرباح تاجر */}
-        {activeTab === 'calculator' && <TaagerProfitCalculator />}
       </main>
     </div>
   );

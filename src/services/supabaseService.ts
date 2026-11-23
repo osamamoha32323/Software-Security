@@ -288,6 +288,14 @@ export const dbService = {
     await supabase.from('orders').upsert(row);
   },
 
+  async deleteOrder(orderId: string): Promise<void> {
+    const { error } = await supabase.from('orders').delete().eq('id', orderId);
+    if (error) {
+      console.error('Supabase delete order error:', error);
+      throw error;
+    }
+  },
+
   // سجلات الأمان
   async logSecurityEvent(log: SecurityLog): Promise<void> {
     try {
