@@ -36,7 +36,7 @@ export const UserManager: React.FC = () => {
 
   const handleSaveCredit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUserForCredit) return;
+    if (!selectedUserForCredit || selectedUserForCredit.role === 'admin') return;
     updateUserCredit(selectedUserForCredit.id, Number(newCreditAmount));
     setSelectedUserForCredit(null);
   };
@@ -109,50 +109,55 @@ export const UserManager: React.FC = () => {
                     </span>
                   </td>
                   <td>
-                    <div style={{ fontWeight: 800, color: '#059669' }}>
-                      {formatEGP(user.storeCredit)}
+                    <div style={{ fontWeight: 800, color: isAdmin ? 'var(--text-muted)' : '#059669' }}>
+                      {isAdmin ? '—' : formatEGP(user.storeCredit)}
                     </div>
                   </td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {formatArabicDate(user.createdAt)}
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                      {/* تبديل الرتبة */}
-                      <button
-                        className="btn btn-outline btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '2px 8px' }}
-                        title={isAdmin ? 'تخفيض إلى مستخدم عادي' : 'ترقية إلى مدير نظام'}
-                        onClick={() => updateUserRole(user.id, isAdmin ? 'user' : 'admin')}
-                        disabled={isCurrent && isAdmin} // منع خفض صلاحية نفسك كأدمن وحيد
-                      >
-                        {isAdmin ? 'تخفيض لمستخدم' : 'ترقية لمدير'}
-                      </button>
+                    {isAdmin ? (
+                      <span className="badge badge-slate" style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        حساب محمي 🛡️
+                      </span>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        {/* تبديل الرتبة */}
+                        <button
+                          className="btn btn-outline btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                          title="ترقية إلى مدير نظام"
+                          onClick={() => updateUserRole(user.id, 'admin')}
+                        >
+                          ترقية لمدير
+                        </button>
 
-                      {/* تعديل الرصيد */}
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#059669' }}
-                        onClick={() => {
-                          setSelectedUserForCredit(user);
-                          setNewCreditAmount(user.storeCredit);
-                        }}
-                        title="تعديل رصيد المتجر"
-                      >
-                        <Wallet size={14} />
-                        <span>الرصيد</span>
-                      </button>
+                        {/* تعديل الرصيد */}
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#059669' }}
+                          onClick={() => {
+                            setSelectedUserForCredit(user);
+                            setNewCreditAmount(user.storeCredit);
+                          }}
+                          title="تعديل رصيد المتجر"
+                        >
+                          <Wallet size={14} />
+                          <span>الرصيد</span>
+                        </button>
 
-                      {/* تفعيل / تعطيل */}
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '2px 8px', color: user.isConfirmed ? '#ef4444' : '#059669' }}
-                        onClick={() => toggleUserStatus(user.id)}
-                        title={user.isConfirmed ? 'إلغاء تفعيل الحساب' : 'تفعيل الحساب مباشرة'}
-                      >
-                        {user.isConfirmed ? 'تعطيل' : 'تفعيل'}
-                      </button>
-                    </div>
+                        {/* تفعيل / تعطيل */}
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '2px 8px', color: user.isConfirmed ? '#ef4444' : '#059669' }}
+                          onClick={() => toggleUserStatus(user.id)}
+                          title={user.isConfirmed ? 'إلغاء تفعيل الحساب' : 'تفعيل الحساب مباشرة'}
+                        >
+                          {user.isConfirmed ? 'تعطيل' : 'تفعيل'}
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               );

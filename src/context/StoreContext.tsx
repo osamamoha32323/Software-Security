@@ -929,7 +929,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addStoreCredit = (amount: number) => {
-    if (!currentUser) return;
+    if (!currentUser || currentUser.role === 'admin') return;
     const updated = { ...currentUser, storeCredit: Math.max(0, currentUser.storeCredit + amount) };
     setCurrentUser(updated);
     setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
@@ -953,6 +953,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleUserStatus = (userId: string) => {
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
+        if (u.role === 'admin') return u; // منع تعطيل حسابات الإدارة
         const updated = { ...u, isConfirmed: !u.isConfirmed };
         dbService.upsertUser(updated).catch(console.error);
         return updated;
@@ -964,13 +965,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateUserCredit = (userId: string, newCredit: number) => {
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
+        if (u.role === 'admin') return u; // حسابات الإدارة لا تقبل رصيد متجر
         const updated = { ...u, storeCredit: newCredit };
         dbService.upsertUser(updated).catch(console.error);
         return updated;
       }
       return u;
     }));
-    if (currentUser?.id === userId) {
+    if (currentUser?.id === userId && currentUser.role !== 'admin') {
       setCurrentUser(prev => prev ? { ...prev, storeCredit: newCredit } : null);
     }
   };
