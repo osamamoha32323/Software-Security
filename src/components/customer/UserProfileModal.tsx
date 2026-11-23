@@ -9,7 +9,6 @@ import {
   MapPin, 
   Phone, 
   Mail, 
-  PlusCircle, 
   CheckCircle2, 
   AlertCircle,
   Truck,
@@ -25,7 +24,6 @@ export const UserProfileModal: React.FC = () => {
     setIsProfileOpen, 
     updateProfile, 
     changePassword, 
-    addStoreCredit, 
     logout,
     orders,
     setIsTrackingOpen,
@@ -168,15 +166,9 @@ export const UserProfileModal: React.FC = () => {
                 {formatEGP(currentUser.storeCredit)}
               </div>
             </div>
-            <button
-              className="btn btn-sm"
-              style={{ background: '#38bdf8', color: '#0f172a', fontWeight: 800, borderRadius: 'var(--radius-full)' }}
-              onClick={() => addStoreCredit(500)}
-              title="إضافة 500 ج.م لرصيد المتجر للاختبار التجريبي"
-            >
-              <PlusCircle size={15} />
-              <span>شحن +500 ج.م (Demo)</span>
-            </button>
+            <div style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'left', maxWidth: '200px', lineHeight: 1.4 }}>
+              * يتم شحن وتعديل الرصيد من قِبل إدارة المتجر فقط
+            </div>
           </div>
         )}
 

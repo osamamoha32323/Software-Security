@@ -964,7 +964,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const addStoreCredit = (amount: number) => {
-    if (!currentUser || currentUser.role === 'admin') return;
+    // تم إلغاء شحن الرصيد الذاتي للمستخدمين - المشرف فقط من يملك صلاحية زيادة الرصيد عبر لوحة الإدارة
+    if (currentUser?.role !== 'admin') return;
     const updated = { ...currentUser, storeCredit: Math.max(0, currentUser.storeCredit + amount) };
     setCurrentUser(updated);
     setUsers(prev => prev.map(u => u.id === currentUser.id ? updated : u));
@@ -1028,6 +1029,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateUserCredit = (userId: string, newCredit: number) => {
+    // صلاحية الإدارة فقط لتعديل وزيادة رصيد المستخدمين
+    if (currentUser?.role !== 'admin') {
+      alert('غير مصرح: المشرف فقط هو من يملك صلاحية تعديل رصيد المستخدمين.');
+      return;
+    }
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
         if (u.role === 'admin') return u; // حسابات الإدارة لا تقبل رصيد متجر
