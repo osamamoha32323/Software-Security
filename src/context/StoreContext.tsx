@@ -147,15 +147,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // سلة
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const isLoggedOut = localStorage.getItem('secureshop_logged_out');
     const savedUserStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     let initialUser: User | null = null;
-    if (!isLoggedOut) {
-      if (savedUserStr) {
-        try { initialUser = JSON.parse(savedUserStr); } catch (e) {}
-      } else {
-        initialUser = INITIAL_USERS[1];
-      }
+    if (savedUserStr) {
+      try { initialUser = JSON.parse(savedUserStr); } catch (e) {}
     }
     const cartKey = initialUser ? `secureshop_cart_user_${initialUser.id}` : STORAGE_KEYS.CART;
     const saved = localStorage.getItem(cartKey);
@@ -183,16 +178,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return INITIAL_USERS;
   });
 
-  // المستخدم الحالي المسجل
+  // المستخدم الحالي المسجل (افتراضياً زائر غير مسجل لفتح الموقع على الهوم)
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const isLoggedOut = localStorage.getItem('secureshop_logged_out');
-    if (isLoggedOut === 'true') return null;
     const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    // افتراضياً نبدأ بحساب العميل الافتراضي لسهولة المعاينة
-    return INITIAL_USERS[1]; // user@secureshop.edu
+    return null; // يبدأ المتجر بزائر غير مسجل افتراضياً
   });
 
   // كوبونات
@@ -932,7 +924,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setOrders(INITIAL_ORDERS);
     setCart([]);
     setUsers(INITIAL_USERS);
-    setCurrentUser(INITIAL_USERS[1]);
+    setCurrentUser(null);
+    setCurrentView('store');
     setCoupons(INITIAL_COUPONS);
     setActiveCoupon(null);
     setSecurityMode('secure');

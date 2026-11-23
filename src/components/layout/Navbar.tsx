@@ -247,20 +247,22 @@ export const Navbar: React.FC = () => {
               </div>
             ) : (
               <button
-                className="btn btn-outline btn-sm"
+                className="btn btn-primary btn-sm"
                 onClick={() => {
                   setIsAuthModalOpen(true);
                   setAuthModalTab('login');
                 }}
                 style={{
                   borderRadius: 'var(--radius-full)',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  gap: '4px'
+                  fontSize: '0.825rem',
+                  fontWeight: 800,
+                  gap: '6px',
+                  padding: '0.45rem 1rem',
+                  boxShadow: '0 2px 8px rgba(37,99,235,0.25)'
                 }}
               >
                 <LogIn size={15} />
-                <span>دخول / تسجيل</span>
+                <span>دخول / تسجيل حساب</span>
               </button>
             )}
 
