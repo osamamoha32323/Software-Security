@@ -11,7 +11,7 @@ import {
 import { useStore } from '../../context/StoreContext';
 
 export const Footer: React.FC = () => {
-  const { setCurrentView, setIsTrackingOpen } = useStore();
+  const { setCurrentView, setIsTrackingOpen, currentUser } = useStore();
 
   return (
     <footer style={{ background: '#0f172a', color: '#f8fafc', marginTop: '4rem', borderTop: '1px solid #1e293b' }}>
@@ -142,11 +142,13 @@ export const Footer: React.FC = () => {
                   تتبع حالة شحنتك
                 </button>
               </li>
-              <li>
-                <button onClick={() => setCurrentView('admin')} style={{ color: '#38bdf8', fontWeight: 700 }}>
-                  دخول لوحة تحكم التاجر 💼
-                </button>
-              </li>
+              {currentUser?.role === 'admin' && (
+                <li>
+                  <button onClick={() => setCurrentView('admin')} style={{ color: '#38bdf8', fontWeight: 700 }}>
+                    دخول لوحة تحكم الإدارة 💼
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
 

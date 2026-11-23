@@ -1,12 +1,12 @@
 import React from 'react';
 import { useStore } from '../../context/StoreContext';
-import { 
-  ShoppingBag, 
-  Search, 
-  Heart, 
-  Truck, 
-  LayoutDashboard, 
-  Store, 
+import {
+  ShoppingBag,
+  Search,
+  Heart,
+  Truck,
+  LayoutDashboard,
+  Store,
   X,
   Sparkles,
   ShieldCheck,
@@ -20,12 +20,12 @@ import {
 import { formatEGP } from '../../utils/formatters';
 
 export const Navbar: React.FC = () => {
-  const { 
-    cartCount, 
-    cartSubtotal, 
-    setIsCartOpen, 
-    wishlist, 
-    searchQuery, 
+  const {
+    cartCount,
+    cartSubtotal,
+    setIsCartOpen,
+    wishlist,
+    searchQuery,
     setSearchQuery,
     searchWarning,
     currentView,
@@ -43,16 +43,16 @@ export const Navbar: React.FC = () => {
   return (
     <header className="navbar">
       {/* الشريط الإعلاني العلوي مع أزرار التحكم الأمني */}
-      <div className="top-announcement" style={{ 
-        background: securityMode === 'secure' 
-          ? 'linear-gradient(90deg, #1e3a8a, #0f172a)' 
+      <div className="top-announcement" style={{
+        background: securityMode === 'secure'
+          ? 'linear-gradient(90deg, #1e3a8a, #0f172a)'
           : 'linear-gradient(90deg, #7f1d1d, #450a0a)',
         padding: '0.45rem 1rem'
       }}>
         <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.78rem', color: '#f8fafc' }}>
-            <span className="top-announcement-highlight" style={{ 
-              background: securityMode === 'secure' ? '#16a34a' : '#dc2626', 
+            <span className="top-announcement-highlight" style={{
+              background: securityMode === 'secure' ? '#16a34a' : '#dc2626',
               color: '#ffffff',
               borderRadius: 'var(--radius-sm)'
             }}>
@@ -112,7 +112,7 @@ export const Navbar: React.FC = () => {
       <div className="container">
         <div className="nav-content">
           {/* الشعار */}
-          <div 
+          <div
             className="nav-brand"
             onClick={() => {
               setCurrentView('store');
@@ -143,7 +143,7 @@ export const Navbar: React.FC = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
-                <button 
+                <button
                   onClick={() => setSearchQuery('')}
                   style={{ color: 'var(--text-muted)', padding: '2px' }}
                 >
@@ -194,7 +194,7 @@ export const Navbar: React.FC = () => {
             {currentUser ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 {/* حبة رصيد المتجر (Store Credit Pill) */}
-                <div 
+                <div
                   onClick={() => setIsProfileOpen(true)}
                   style={{
                     background: '#eff6ff',
@@ -281,29 +281,31 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            {/* التبديل بين المتجر ولوحة الإدارة */}
-            {currentView === 'store' ? (
-              <button
-                className="admin-mode-pill"
-                onClick={() => setCurrentView('admin')}
-                title="لوحة تحكم إدارة المتجر والمستخدمين"
-                style={{
-                  background: currentUser?.role === 'admin' ? 'linear-gradient(135deg, #1e293b, #0f172a)' : 'var(--bg-subtle)',
-                  color: currentUser?.role === 'admin' ? '#38bdf8' : 'var(--text-muted)'
-                }}
-              >
-                <LayoutDashboard size={16} />
-                <span>لوحة الإدارة</span>
-              </button>
-            ) : (
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={() => setCurrentView('store')}
-                style={{ borderRadius: 'var(--radius-full)' }}
-              >
-                <Store size={16} />
-                <span>الرجوع للمتجر</span>
-              </button>
+            {/* التبديل بين المتجر ولوحة الإدارة - يظهر حصرياً لحساب المدير فقط */}
+            {currentUser?.role === 'admin' && (
+              currentView === 'store' ? (
+                <button
+                  className="admin-mode-pill"
+                  onClick={() => setCurrentView('admin')}
+                  title="لوحة تحكم إدارة المتجر والمستخدمين"
+                  style={{
+                    background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+                    color: '#38bdf8'
+                  }}
+                >
+                  <LayoutDashboard size={16} />
+                  <span>لوحة الإدارة</span>
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setCurrentView('store')}
+                  style={{ borderRadius: 'var(--radius-full)' }}
+                >
+                  <Store size={16} />
+                  <span>الرجوع للمتجر</span>
+                </button>
+              )
             )}
           </div>
         </div>

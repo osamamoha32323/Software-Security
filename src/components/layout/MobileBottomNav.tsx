@@ -9,7 +9,8 @@ export const MobileBottomNav: React.FC = () => {
     cartCount, 
     setIsCartOpen, 
     setIsTrackingOpen,
-    setSelectedCategory
+    setSelectedCategory,
+    currentUser
   } = useStore();
 
   return (
@@ -64,13 +65,15 @@ export const MobileBottomNav: React.FC = () => {
         <span>تتبع طلبك</span>
       </button>
 
-      <button 
-        className={`mobile-nav-item ${currentView === 'admin' ? 'active' : ''}`}
-        onClick={() => setCurrentView('admin')}
-      >
-        <LayoutDashboard size={20} />
-        <span>لوحة التاجر</span>
-      </button>
+      {currentUser?.role === 'admin' && (
+        <button 
+          className={`mobile-nav-item ${currentView === 'admin' ? 'active' : ''}`}
+          onClick={() => setCurrentView('admin')}
+        >
+          <LayoutDashboard size={20} />
+          <span>لوحة الإدارة</span>
+        </button>
+      )}
     </nav>
   );
 };

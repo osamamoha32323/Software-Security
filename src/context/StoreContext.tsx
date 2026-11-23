@@ -5,11 +5,11 @@ import { Coupon } from '../types/coupon';
 import { SecurityMode, SecurityLog } from '../types/security';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS } from '../data/initialProducts';
 import { INITIAL_USERS, INITIAL_COUPONS } from '../data/initialSecurityData';
-import { 
-  hashPasswordSecure, 
-  generateSalt, 
-  validateCartQuantity, 
-  validateCouponSecurity, 
+import {
+  hashPasswordSecure,
+  generateSalt,
+  validateCartQuantity,
+  validateCouponSecurity,
   validateOrderAccess,
   validateSearchQuery
 } from '../security/securityService';
@@ -147,7 +147,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // سلة
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CART);
+    const isLoggedOut = localStorage.getItem('secureshop_logged_out');
+    const savedUserStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    let initialUser: User | null = null;
+    if (!isLoggedOut) {
+      if (savedUserStr) {
+        try { initialUser = JSON.parse(savedUserStr); } catch (e) {}
+      } else {
+        initialUser = INITIAL_USERS[1];
+      }
+    }
+    const cartKey = initialUser ? `secureshop_cart_user_${initialUser.id}` : STORAGE_KEYS.CART;
+    const saved = localStorage.getItem(cartKey);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
@@ -174,6 +185,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // المستخدم الحالي المسجل
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const isLoggedOut = localStorage.getItem('secureshop_logged_out');
+    if (isLoggedOut === 'true') return null;
     const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
@@ -237,7 +250,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [orders]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cart));
+    if (currentUser) {
+      localStorage.setItem(`secureshop_cart_user_${currentUser.id}`, JSON.stringify(cart));
+    } else {
+      localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cart));
+    }
   }, [cart]);
 
   useEffect(() => {
@@ -415,6 +432,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clearCart = () => {
     setCart([]);
     setActiveCoupon(null);
+    if (currentUser) {
+      localStorage.removeItem(`secureshop_cart_user_${currentUser.id}`);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CART);
+    }
   };
 
   const openCheckoutWithSingleProduct = (product: Product, quantity = 1) => {
@@ -530,9 +552,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         blocked: true,
         details: `محاولة اختراق تكراري محجوبة. الحساب مقفل لمدة ${remainingSeconds} ثانية إضافية`
       });
-      return { 
-        success: false, 
-        error: `تم قفل الحساب أمنياً لتكرار المحاولات الخاطئة! يرجى الانتظار ${remainingSeconds} ثانية.` 
+      return {
+        success: false,
+        error: `تم قفل الحساب أمنياً لتكرار المحاولات الخاطئة! يرجى الانتظار ${remainingSeconds} ثانية.`
       };
     }
 
@@ -569,19 +591,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         lockUntil: lockUntilTime
       } : u));
 
-      return { 
-        success: false, 
-        error: shouldLock 
-          ? 'تم تجاوز عدد المحاولات المسموح بها! تم قفل الحساب لمدة دقيقة لحمايته.' 
-          : `كلمة المرور غير صحيحة! المتبقي ${5 - newAttempts} محاولات قبل القفل.` 
+      return {
+        success: false,
+        error: shouldLock
+          ? 'تم تجاوز عدد المحاولات المسموح بها! تم قفل الحساب لمدة دقيقة لحمايته.'
+          : `كلمة المرور غير صحيحة! المتبقي ${5 - newAttempts} محاولات قبل القفل.`
       };
     }
 
     // فحص تأكيد الحساب
     if (!user.isConfirmed) {
-      return { 
-        success: false, 
-        error: 'هذا الحساب لم يتم تأكيده بعد! يرجى إدخال رمز التأكيد أولاً لتفعيله.' 
+      return {
+        success: false,
+        error: 'هذا الحساب لم يتم تأكيده بعد! يرجى إدخال رمز التأكيد أولاً لتفعيله.'
       };
     }
 
@@ -589,6 +611,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const updatedUser = { ...user, failedAttempts: 0, isLocked: false, lockUntil: undefined };
     setUsers(prev => prev.map(u => u.id === user.id ? updatedUser : u));
     setCurrentUser(updatedUser);
+    localStorage.removeItem('secureshop_logged_out');
+
+    // استرجاع السلة المحفوظة الخاصة بهذا المستخدم تحديداً
+    const userCartKey = `secureshop_cart_user_${user.id}`;
+    const savedUserCart = localStorage.getItem(userCartKey);
+    if (savedUserCart) {
+      try {
+        setCart(JSON.parse(savedUserCart));
+      } catch (e) {
+        setCart([]);
+      }
+    } else {
+      setCart([]);
+    }
 
     addSecurityLog({
       attackType: 'User Authentication',
@@ -630,9 +666,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     setUsers(prev => [...prev, newUser]);
 
-    return { 
-      success: true, 
-      confirmationCode 
+    return {
+      success: true,
+      confirmationCode
     };
   };
 
@@ -652,6 +688,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const confirmedUser = { ...user, isConfirmed: true };
     setUsers(prev => prev.map(u => u.id === user.id ? confirmedUser : u));
     setCurrentUser(confirmedUser);
+    localStorage.removeItem('secureshop_logged_out');
+
+    const userCartKey = `secureshop_cart_user_${user.id}`;
+    const savedUserCart = localStorage.getItem(userCartKey);
+    if (savedUserCart) {
+      try { setCart(JSON.parse(savedUserCart)); } catch (e) { setCart([]); }
+    } else {
+      setCart([]);
+    }
 
     addSecurityLog({
       attackType: 'Account Confirmation',
@@ -664,7 +709,30 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const logout = () => {
+    // 1. حفظ سلة المستخدم الحالي في المتصفح قبل الخروج حتى يستعيدها عند العودة
+    if (currentUser) {
+      localStorage.setItem(`secureshop_cart_user_${currentUser.id}`, JSON.stringify(cart));
+    }
+    // 2. تصفير السلة بالكامل في واجهة الموقع
+    setCart([]);
+    setActiveCoupon(null);
+    // 3. مسح المستخدم النشط وتسجيل حالة الخروج
     setCurrentUser(null);
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.setItem('secureshop_logged_out', 'true');
+    // 4. الانتقال لصفحة الهوم فوراً وإغلاق أي نوافذ منبثقة
+    setCurrentView('store');
+    setIsProfileOpen(false);
+    setIsCartOpen(false);
+    setIsCheckoutOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    addSecurityLog({
+      attackType: 'User Logout',
+      payload: 'Logout triggered',
+      blocked: false,
+      details: 'تم تسجيل الخروج بنجاح والرجوع للصفحة الرئيسية وتفريغ السلة المعروضة'
+    });
   };
 
   const updateProfile = (data: Partial<User>) => {
@@ -767,7 +835,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // تسجيل استخدام الكوبون لمنع إعادة الاستخدام
     if (activeCoupon && currentUser) {
-      setCoupons(prev => prev.map(c => 
+      setCoupons(prev => prev.map(c =>
         c.id === activeCoupon.id ? { ...c, usedByUsers: [...c.usedByUsers, currentUser.id] } : c
       ));
     }
