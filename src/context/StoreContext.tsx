@@ -179,8 +179,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const parsed: User[] = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((u: User) => {
-            // ضمان تحديث وتأكيد حساب المشرف دائماً
-            if (u.email.toLowerCase() === 'admin@secureshop.edu' || u.role === 'admin') {
+            // ضمان أن المشرف الوحيد هو admin@secureshop.edu
+            if (u.email.toLowerCase() === 'admin@secureshop.edu') {
               return {
                 ...u,
                 role: 'admin',
@@ -194,6 +194,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (u.email.toLowerCase() === 'user@secureshop.edu') {
               return {
                 ...u,
+                role: 'user',
                 isConfirmed: true,
                 passwordHash: '1563ab57508234cbc48fb37ab8df3843f5767c3c062a9804e971341cc9d42b37',
                 salt: 'salt_secureshop_user_2026',
@@ -201,7 +202,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 isLocked: false
               };
             }
-            return u;
+            return { ...u, role: 'user' };
           });
         }
       } catch (e) { console.error(e); }
@@ -213,7 +214,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try { 
+        const parsed = JSON.parse(saved); 
+        if (parsed) {
+          if (parsed.email?.toLowerCase() !== 'admin@secureshop.edu') {
+            parsed.role = 'user';
+          }
+          return parsed;
+        }
+      } catch (e) { console.error(e); }
     }
     return null; // يبدأ المتجر بزائر غير مسجل افتراضياً
   });
@@ -329,8 +338,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
 
         if (remoteUsers && remoteUsers.length > 0) {
-          setUsers(remoteUsers);
-          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(remoteUsers));
+          const sanitizedUsers = remoteUsers.map(u => {
+            if (u.email.toLowerCase() === 'admin@secureshop.edu') {
+              return { ...u, role: 'admin' as const };
+            }
+            return { ...u, role: 'user' as const };
+          });
+          setUsers(sanitizedUsers);
+          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(sanitizedUsers));
         }
 
         if (remoteCoupons && remoteCoupons.length > 0) {
