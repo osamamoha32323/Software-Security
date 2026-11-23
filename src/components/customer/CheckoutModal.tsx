@@ -378,7 +378,7 @@ export const CheckoutModal: React.FC = () => {
                   >
                     {EGYPT_GOVERNORATES.map(gov => (
                       <option key={gov.id} value={gov.id}>
-                        {gov.nameAr} ({gov.shippingCost} ج.م شحن)
+                        {gov.nameAr} (شحن مجاني)
                       </option>
                     ))}
                   </select>
@@ -587,10 +587,10 @@ export const CheckoutModal: React.FC = () => {
 
                 <div className="flex items-center justify-between" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
                   <span className="flex items-center gap-1">
-                    <Truck size={14} />
+                    <Truck size={14} color="#16a34a" />
                     <span>مصاريف الشحن ({currentGov.nameAr}):</span>
                   </span>
-                  <span style={{ fontWeight: 700, color: 'var(--primary)' }}>{formatEGP(shippingCost)}</span>
+                  <span style={{ fontWeight: 800, color: '#16a34a' }}>مجاناً (0 ج.م)</span>
                 </div>
 
                 <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

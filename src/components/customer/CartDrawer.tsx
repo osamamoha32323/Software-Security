@@ -208,9 +208,9 @@ export const CartDrawer: React.FC = () => {
               </span>
             </div>
 
-            <div className="flex items-center gap-1" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-              <Truck size={14} color="var(--primary)" />
-              <span>يتم احتساب مصاريف الشحن بدقة حسب محافظتك في الخطوة التالية.</span>
+            <div className="flex items-center gap-1" style={{ fontSize: '0.78rem', color: '#16a34a', marginBottom: '1.25rem', fontWeight: 700 }}>
+              <Truck size={14} color="#16a34a" />
+              <span>الشحن مجاني بالكامل لكافة محافظات مصر 🚀</span>
             </div>
 
             <button

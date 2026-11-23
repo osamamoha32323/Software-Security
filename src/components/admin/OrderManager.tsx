@@ -183,8 +183,8 @@ export const OrderManager: React.FC = () => {
                         <strong style={{ fontSize: '0.95rem', color: 'var(--text-main)' }}>
                           {formatEGP(order.total)}
                         </strong>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          (شامل {order.shippingCost} ج.م شحن)
+                        <div style={{ fontSize: '0.7rem', color: order.shippingCost > 0 ? 'var(--text-muted)' : '#16a34a' }}>
+                          {order.shippingCost > 0 ? `(شامل ${order.shippingCost} ج.م شحن)` : '(شحن مجاني)'}
                         </div>
                       </td>
 
@@ -369,7 +369,9 @@ export const OrderManager: React.FC = () => {
               </div>
               <div className="flex items-center justify-between" style={{ marginBottom: '0.35rem' }}>
                 <span>مصاريف الشحن ({selectedOrderDetails.governorate}):</span>
-                <strong>{formatEGP(selectedOrderDetails.shippingCost)}</strong>
+                <strong style={{ color: selectedOrderDetails.shippingCost > 0 ? 'var(--text-main)' : '#16a34a' }}>
+                  {selectedOrderDetails.shippingCost > 0 ? formatEGP(selectedOrderDetails.shippingCost) : 'شحن مجاني (0 ج.م)'}
+                </strong>
               </div>
               <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
                 <span>تكلفة بضاعة تاجر:</span>
