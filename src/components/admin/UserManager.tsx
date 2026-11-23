@@ -11,7 +11,8 @@ import {
   Search, 
   Key,
   Shield,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import { formatEGP, formatArabicDate } from '../../utils/formatters';
 import { User, UserRole } from '../../types/auth';
@@ -19,9 +20,9 @@ import { User, UserRole } from '../../types/auth';
 export const UserManager: React.FC = () => {
   const { 
     users, 
-    updateUserRole, 
     toggleUserStatus, 
     updateUserCredit,
+    deleteUser,
     currentUser 
   } = useStore();
 
@@ -47,10 +48,10 @@ export const UserManager: React.FC = () => {
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Users size={22} color="var(--primary)" />
-            <span>إدارة المستخدمين والصلاحيات (User & RBAC Management)</span>
+            <span>إدارة حسابات العملاء والمستخدمين (User Management)</span>
           </h2>
           <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>
-            التحكم في أدوار الحسابات (Admin / User)، تفعيل الحسابات، وتعديل أرصدة المتجر.
+            تفعيل الحسابات، تعديل أرصدة المتجر، وحذف الحسابات (حساب المدير محمي تماماً).
           </p>
         </div>
 
@@ -123,16 +124,6 @@ export const UserManager: React.FC = () => {
                       </span>
                     ) : (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        {/* تبديل الرتبة */}
-                        <button
-                          className="btn btn-outline btn-sm"
-                          style={{ fontSize: '0.75rem', padding: '2px 8px' }}
-                          title="ترقية إلى مدير نظام"
-                          onClick={() => updateUserRole(user.id, 'admin')}
-                        >
-                          ترقية لمدير
-                        </button>
-
                         {/* تعديل الرصيد */}
                         <button
                           className="btn btn-ghost btn-sm"
@@ -150,11 +141,26 @@ export const UserManager: React.FC = () => {
                         {/* تفعيل / تعطيل */}
                         <button
                           className="btn btn-ghost btn-sm"
-                          style={{ fontSize: '0.75rem', padding: '2px 8px', color: user.isConfirmed ? '#ef4444' : '#059669' }}
+                          style={{ fontSize: '0.75rem', padding: '2px 8px', color: user.isConfirmed ? '#f59e0b' : '#059669' }}
                           onClick={() => toggleUserStatus(user.id)}
                           title={user.isConfirmed ? 'إلغاء تفعيل الحساب' : 'تفعيل الحساب مباشرة'}
                         >
                           {user.isConfirmed ? 'تعطيل' : 'تفعيل'}
+                        </button>
+
+                        {/* حذف الحساب */}
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '2px 8px', color: '#ef4444' }}
+                          onClick={() => {
+                            if (window.confirm(`هل أنت متأكد من حذف حساب "${user.name}" (${user.email}) نهائياً؟`)) {
+                              deleteUser(user.id);
+                            }
+                          }}
+                          title="حذف حساب المستخدم نهائياً"
+                        >
+                          <Trash2 size={14} />
+                          <span>حذف</span>
                         </button>
                       </div>
                     )}

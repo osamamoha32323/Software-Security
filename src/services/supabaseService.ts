@@ -238,6 +238,14 @@ export const dbService = {
     await supabase.from('users').upsert(row);
   },
 
+  async deleteUser(userId: string): Promise<void> {
+    const { error } = await supabase.from('users').delete().eq('id', userId);
+    if (error) {
+      console.error('Supabase delete user error:', error);
+      throw error;
+    }
+  },
+
   // الكوبونات
   async getCoupons(): Promise<Coupon[]> {
     const { data, error } = await supabase

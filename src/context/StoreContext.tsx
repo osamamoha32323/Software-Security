@@ -79,6 +79,7 @@ interface StoreContextType {
   updateUserRole: (userId: string, role: 'user' | 'admin') => void;
   toggleUserStatus: (userId: string) => void;
   updateUserCredit: (userId: string, newCredit: number) => void;
+  deleteUser: (userId: string) => { success: boolean; error?: string };
 
   // كوبونات ونشرة بريدية (Coupons & Newsletter)
   coupons: Coupon[];
@@ -937,17 +938,47 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateUserRole = (userId: string, role: 'user' | 'admin') => {
+    // منع ترقية أي مستخدم لمدير - المشرف الحالي هو المدير الوحيد
+    if (role === 'admin') {
+      alert('غير مسموح بترقية حسابات جديدة كمسؤول. مدير النظام الحالي هو المسؤول الوحيد للنظام.');
+      return;
+    }
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
+        if (u.role === 'admin') return u;
         const updated = { ...u, role };
         dbService.upsertUser(updated).catch(console.error);
         return updated;
       }
       return u;
     }));
-    if (currentUser?.id === userId) {
+    if (currentUser?.id === userId && currentUser.role !== 'admin') {
       setCurrentUser(prev => prev ? { ...prev, role } : null);
     }
+  };
+
+  const deleteUser = (userId: string) => {
+    const target = users.find(u => u.id === userId);
+    if (!target) {
+      return { success: false, error: 'المستخدم غير موجود' };
+    }
+    if (target.role === 'admin') {
+      alert('خطأ أمني: لا يمكن حذف حساب مدير النظام (Admin)!');
+      return { success: false, error: 'لا يمكن حذف حساب المسؤول' };
+    }
+
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    dbService.deleteUser(userId).catch(console.error);
+
+    try {
+      localStorage.removeItem('dukkan_cart_' + userId);
+    } catch {}
+
+    if (currentUser?.id === userId) {
+      logout();
+    }
+
+    return { success: true };
   };
 
   const toggleUserStatus = (userId: string) => {
@@ -1190,6 +1221,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         updateUserRole,
         toggleUserStatus,
         updateUserCredit,
+        deleteUser,
         coupons,
         activeCoupon,
         couponDiscount,
