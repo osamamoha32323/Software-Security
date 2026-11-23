@@ -223,6 +223,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (parsed.email?.toLowerCase() !== 'admin@secureshop.edu') {
             parsed.role = 'user';
           }
+          // التحقق من الرصيد المحدث المحفوظ في قائمة المستخدمين
+          const savedUsersStr = localStorage.getItem(STORAGE_KEYS.USERS);
+          if (savedUsersStr) {
+            const parsedUsers = JSON.parse(savedUsersStr);
+            if (Array.isArray(parsedUsers)) {
+              const matched = parsedUsers.find((u: User) => 
+                u.id === parsed.id || u.email?.toLowerCase() === parsed.email?.toLowerCase()
+              );
+              if (matched && typeof matched.storeCredit === 'number') {
+                parsed.storeCredit = matched.storeCredit;
+              }
+            }
+          }
           return parsed;
         }
       } catch (e) { console.error(e); }
@@ -335,6 +348,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem(STORAGE_KEYS.SECURITY_LOGS, JSON.stringify(securityLogs));
   }, [securityLogs]);
 
+  // مزامنة رصيد وبيانات المستخدم الحالي مع مصفوفة المستخدمين تلقائياً
+  useEffect(() => {
+    if (!currentUser) return;
+    const freshInUsers = users.find(u => 
+      u.id === currentUser.id || u.email.toLowerCase() === currentUser.email.toLowerCase()
+    );
+    if (freshInUsers && freshInUsers.storeCredit !== currentUser.storeCredit) {
+      setCurrentUser(prev => prev ? { ...prev, storeCredit: freshInUsers.storeCredit } : null);
+    }
+  }, [users, currentUser?.id, currentUser?.email, currentUser?.storeCredit]);
+
+  // مزامنة فورية بين التبويبات المتعددة (Multi-tab Real-time Sync)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEYS.USERS && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setUsers(parsed);
+          }
+        } catch {}
+      }
+      if (e.key === STORAGE_KEYS.CURRENT_USER && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed) {
+            setCurrentUser(parsed);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // مزامنة فورية مع قاعدة بيانات Supabase الحية عند بدء التطبيق
   useEffect(() => {
     let isMounted = true;
@@ -364,6 +412,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           });
           setUsers(sanitizedUsers);
           localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(sanitizedUsers));
+
+          // تحديث بيانات المستخدم الحالي النشط برصيده الحديث من قاعدة البيانات فوراً
+          setCurrentUser(prevUser => {
+            if (!prevUser) return null;
+            const fresh = sanitizedUsers.find(u => 
+              u.id === prevUser.id || u.email.toLowerCase() === prevUser.email.toLowerCase()
+            );
+            if (fresh) {
+              const updated = { 
+                ...prevUser, 
+                ...fresh,
+                role: (prevUser.email.toLowerCase() === 'admin@secureshop.edu' ? 'admin' : 'user') as ('admin' | 'user')
+              };
+              localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
+              return updated;
+            }
+            return prevUser;
+          });
         }
 
         if (remoteCoupons && remoteCoupons.length > 0) {
@@ -1034,18 +1100,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       alert('غير مصرح: المشرف فقط هو من يملك صلاحية تعديل رصيد المستخدمين.');
       return;
     }
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        if (u.role === 'admin') return u; // حسابات الإدارة لا تقبل رصيد متجر
-        const updated = { ...u, storeCredit: newCredit };
-        dbService.upsertUser(updated).catch(console.error);
-        return updated;
+    const targetUser = users.find(u => u.id === userId);
+    if (!targetUser || targetUser.role === 'admin') return;
+
+    const updatedUserObj = { ...targetUser, storeCredit: newCredit };
+
+    setUsers(prev => {
+      const updatedList = prev.map(u => u.id === userId ? updatedUserObj : u);
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedList));
+      return updatedList;
+    });
+
+    dbService.upsertUser(updatedUserObj).catch(console.error);
+
+    // إذا كان المستخدم المحفوظ في الجلسة الحالية هو نفس المستخدم، يتم تحديث رصيده فوراً
+    try {
+      const savedUserStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+      if (savedUserStr) {
+        const savedUser = JSON.parse(savedUserStr);
+        if (savedUser.id === userId || savedUser.email?.toLowerCase() === targetUser.email.toLowerCase()) {
+          const updatedSaved = { ...savedUser, storeCredit: newCredit };
+          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedSaved));
+          setCurrentUser(prev => prev ? { ...prev, storeCredit: newCredit } : null);
+        }
       }
-      return u;
-    }));
-    if (currentUser?.id === userId && currentUser.role !== 'admin') {
-      setCurrentUser(prev => prev ? { ...prev, storeCredit: newCredit } : null);
-    }
+    } catch (e) {}
   };
 
   // إنشاء الطلبات والدفع برصيد المتجر
