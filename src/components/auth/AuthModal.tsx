@@ -292,6 +292,7 @@ export const AuthModal: React.FC = () => {
                   placeholder="name@example.com"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
+                  autoComplete="off"
                   required
                 />
                 <Mail size={16} color="var(--text-muted)" style={{ position: 'absolute', right: '12px', top: '12px' }} />
@@ -310,6 +311,7 @@ export const AuthModal: React.FC = () => {
                   placeholder="••••••••"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                 />
                 <Lock size={16} color="var(--text-muted)" style={{ position: 'absolute', right: '12px', top: '12px' }} />
