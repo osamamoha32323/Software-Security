@@ -81,6 +81,7 @@ interface StoreContextType {
   toggleUserStatus: (userId: string) => void;
   updateUserCredit: (userId: string, newCredit: number) => void;
   deleteUser: (userId: string) => { success: boolean; error?: string };
+  toggleUserSecurityMode: (userId: string) => void;
 
   // كوبونات ونشرة بريدية (Coupons & Newsletter)
   coupons: Coupon[];
@@ -183,12 +184,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         const parsed: User[] = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((u: User) => {
+          let mapped: User[] = parsed.map((u: User) => {
             // ضمان أن المشرف الوحيد هو admin@secureshop.edu
             if (u.email.toLowerCase() === 'admin@secureshop.edu') {
               return {
                 ...u,
-                role: 'admin',
+                role: 'admin' as const,
                 isConfirmed: true,
                 passwordHash: '2600fc73ca89dfbb3e70b75eb72a642306f6cb7072f2c218ae31c19addb4679b',
                 salt: 'salt_secureshop_admin_2026',
@@ -199,7 +200,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             if (u.email.toLowerCase() === 'user@secureshop.edu') {
               return {
                 ...u,
-                role: 'user',
+                role: 'user' as const,
                 isConfirmed: true,
                 passwordHash: '1563ab57508234cbc48fb37ab8df3843f5767c3c062a9804e971341cc9d42b37',
                 salt: 'salt_secureshop_user_2026',
@@ -207,12 +208,37 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 isLocked: false
               };
             }
-            return { ...u, role: 'user' };
+            return { ...u, role: 'user' as const };
           });
+
+          // دمج أوضاع الأمان المحفوظة لكل مستخدم
+          try {
+            const savedModesStr = localStorage.getItem('secureshop_user_sec_modes_v2');
+            if (savedModesStr) {
+              const savedModes = JSON.parse(savedModesStr) as Record<string, SecurityMode>;
+              mapped = mapped.map(u => ({
+                ...u,
+                securityMode: savedModes[u.id] || u.securityMode || 'secure'
+              }));
+            }
+          } catch (e) {}
+
+          return mapped;
         }
       } catch (e) { console.error(e); }
     }
-    return INITIAL_USERS;
+    let initialList: User[] = INITIAL_USERS;
+    try {
+      const savedModesStr = localStorage.getItem('secureshop_user_sec_modes_v2');
+      if (savedModesStr) {
+        const savedModes = JSON.parse(savedModesStr) as Record<string, SecurityMode>;
+        initialList = initialList.map(u => ({
+          ...u,
+          securityMode: savedModes[u.id] || u.securityMode || 'secure'
+        }));
+      }
+    } catch (e) {}
+    return initialList;
   });
 
   // المستخدم الحالي المسجل (افتراضياً زائر غير مسجل لفتح الموقع على الهوم)
@@ -225,7 +251,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (parsed.email?.toLowerCase() !== 'admin@secureshop.edu') {
             parsed.role = 'user';
           }
-          // التحقق من الرصيد المحدث المحفوظ في قائمة المستخدمين
+          // التحقق من الرصيد ووضع الأمان المحدث المحفوظ في قائمة المستخدمين
           const savedUsersStr = localStorage.getItem(STORAGE_KEYS.USERS);
           if (savedUsersStr) {
             const parsedUsers = JSON.parse(savedUsersStr);
@@ -233,8 +259,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               const matched = parsedUsers.find((u: User) => 
                 u.id === parsed.id || u.email?.toLowerCase() === parsed.email?.toLowerCase()
               );
-              if (matched && typeof matched.storeCredit === 'number') {
-                parsed.storeCredit = matched.storeCredit;
+              if (matched) {
+                if (typeof matched.storeCredit === 'number') {
+                  parsed.storeCredit = matched.storeCredit;
+                }
+                if (matched.securityMode) {
+                  parsed.securityMode = matched.securityMode;
+                }
               }
             }
           }
@@ -381,10 +412,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const freshInUsers = users.find(u => 
       u.id === currentUser.id || u.email.toLowerCase() === currentUser.email.toLowerCase()
     );
-    if (freshInUsers && freshInUsers.storeCredit !== currentUser.storeCredit) {
-      setCurrentUser(prev => prev ? { ...prev, storeCredit: freshInUsers.storeCredit } : null);
+    if (freshInUsers) {
+      let changed = false;
+      let updatedUser = { ...currentUser };
+      if (freshInUsers.storeCredit !== currentUser.storeCredit) {
+        updatedUser.storeCredit = freshInUsers.storeCredit;
+        changed = true;
+      }
+      if (freshInUsers.securityMode && freshInUsers.securityMode !== currentUser.securityMode) {
+        updatedUser.securityMode = freshInUsers.securityMode;
+        setSecurityMode(freshInUsers.securityMode);
+        changed = true;
+      }
+      if (changed) {
+        setCurrentUser(updatedUser);
+      }
     }
-  }, [users, currentUser?.id, currentUser?.email, currentUser?.storeCredit]);
+  }, [users, currentUser?.id, currentUser?.email, currentUser?.storeCredit, currentUser?.securityMode]);
 
   // مزامنة فورية بين التبويبات المتعددة (Multi-tab Real-time Sync)
   useEffect(() => {
@@ -1216,6 +1260,44 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch (e) {}
   };
 
+  const toggleUserSecurityMode = (userId: string) => {
+    let targetMode: SecurityMode = 'secure';
+
+    setUsers(prev => {
+      const updatedList = prev.map(u => {
+        if (u.id === userId) {
+          const nextMode: SecurityMode = (u.securityMode === 'naive' ? 'secure' : 'naive');
+          targetMode = nextMode;
+          return { ...u, securityMode: nextMode };
+        }
+        return u;
+      });
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedList));
+      return updatedList;
+    });
+
+    try {
+      const savedModesStr = localStorage.getItem('secureshop_user_sec_modes_v2');
+      const savedModes = savedModesStr ? JSON.parse(savedModesStr) : {};
+      savedModes[userId] = targetMode;
+      localStorage.setItem('secureshop_user_sec_modes_v2', JSON.stringify(savedModes));
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (currentUser?.id === userId) {
+      setCurrentUser(prev => prev ? { ...prev, securityMode: targetMode } : null);
+      setSecurityMode(targetMode);
+    }
+
+    addSecurityLog({
+      attackType: 'User Security Mode Toggled',
+      payload: `UserId: ${userId} -> ${targetMode.toUpperCase()}`,
+      blocked: false,
+      details: `قام مسؤول النظام بتبديل وضع الأمان للمستخدم إلى: ${targetMode === 'secure' ? '🛡️ الآمن (SecureShop)' : '⚠️ الساذج (Naive)'}`
+    });
+  };
+
   // إنشاء الطلبات والدفع برصيد المتجر
   const createOrder = (orderData: Omit<Order, 'id' | 'createdAt' | 'statusHistory' | 'status'>): Order | null => {
     // التحقق من الدفع برصيد المتجر (Store Credit Payment)
@@ -1438,6 +1520,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toggleUserStatus,
         updateUserCredit,
         deleteUser,
+        toggleUserSecurityMode,
         coupons,
         activeCoupon,
         couponDiscount,

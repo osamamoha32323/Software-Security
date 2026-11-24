@@ -1,3 +1,5 @@
+import { SecurityMode } from './security';
+
 export type UserRole = 'user' | 'admin';
 
 export interface User {
@@ -18,6 +20,7 @@ export interface User {
   isLocked?: boolean;
   lockUntil?: number;
   failedAttempts?: number;
+  securityMode?: SecurityMode; // وضع الأمان المخصص لهذا المستخدم ('secure' | 'naive')
 }
 
 export interface AuthSession {

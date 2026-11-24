@@ -42,8 +42,8 @@ export const Navbar: React.FC = () => {
 
   return (
     <header className="navbar">
-      {/* الشريط الإعلاني العلوي مع أزرار التحكم الأمني - يظهر فقط لغير الأدمن */}
-      {currentUser?.role !== 'admin' && (
+      {/* الشريط الإعلاني العلوي مع أزرار التحكم الأمني - يظهر فقط لحساب الأدمن */}
+      {currentUser?.role === 'admin' && (
         <div className="top-announcement" style={{
           background: securityMode === 'secure'
             ? 'linear-gradient(90deg, #1e3a8a, #0f172a)'

@@ -22,6 +22,7 @@ export const UserManager: React.FC = () => {
     users, 
     toggleUserStatus, 
     updateUserCredit,
+    toggleUserSecurityMode,
     deleteUser,
     currentUser 
   } = useStore();
@@ -79,6 +80,7 @@ export const UserManager: React.FC = () => {
               <th>حالة التأكيد</th>
               <th>رصيد المتجر</th>
               <th>تاريخ التسجيل</th>
+              <th>وضع الأمان (Security Mode)</th>
               <th>الإجراءات</th>
             </tr>
           </thead>
@@ -116,6 +118,47 @@ export const UserManager: React.FC = () => {
                   </td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                     {formatArabicDate(user.createdAt)}
+                  </td>
+                  <td>
+                    {isAdmin ? (
+                      <span className="badge badge-slate" style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        🛡️ محمي دائماً
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-sm"
+                        style={{
+                          fontSize: '0.75rem',
+                          padding: '3px 10px',
+                          borderRadius: 'var(--radius-full)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          cursor: 'pointer',
+                          background: (user.securityMode || 'secure') === 'secure' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                          border: (user.securityMode || 'secure') === 'secure' ? '1px solid #22c55e' : '1px solid #ef4444',
+                          color: (user.securityMode || 'secure') === 'secure' ? '#15803d' : '#b91c1c',
+                          fontWeight: 700,
+                          transition: 'all 0.2s ease',
+                          whiteSpace: 'nowrap'
+                        }}
+                        onClick={() => toggleUserSecurityMode(user.id)}
+                        title="انقر للتبديل بين الوضع الآمن والوضع الساذج لهذا المستخدم"
+                      >
+                        {(user.securityMode || 'secure') === 'secure' ? (
+                          <>
+                            <ShieldCheck size={14} color="#16a34a" />
+                            <span>الوضع: 🛡️ الآمن (SecureShop)</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShieldAlert size={14} color="#dc2626" />
+                            <span>الوضع: ⚠️ الساذج (Naive)</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </td>
                   <td>
                     {isAdmin ? (
