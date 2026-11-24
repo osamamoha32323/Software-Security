@@ -40,7 +40,7 @@ export const AdminDashboard: React.FC = () => {
   } = useStore();
 
   const [activeTab, setActiveTabState] = useState<'overview' | 'products' | 'orders' | 'users' | 'coupons'>(() => {
-    const saved = localStorage.getItem('secureshop_admin_tab_v2');
+    const saved = sessionStorage.getItem('secureshop_admin_tab_v2');
     const validTabs = ['overview', 'products', 'orders', 'users', 'coupons'];
     if (saved && validTabs.includes(saved)) {
       return saved as any;
@@ -50,7 +50,7 @@ export const AdminDashboard: React.FC = () => {
 
   const setActiveTab = (tab: 'overview' | 'products' | 'orders' | 'users' | 'coupons') => {
     setActiveTabState(tab);
-    localStorage.setItem('secureshop_admin_tab_v2', tab);
+    sessionStorage.setItem('secureshop_admin_tab_v2', tab);
   };
   const [showAddProductModal, setShowAddProductModal] = useState(false);
 

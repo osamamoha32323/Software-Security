@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Product, Order } from '../types/ecommerce';
 import { User } from '../types/auth';
 import { Coupon } from '../types/coupon';
-import { SecurityLog } from '../types/security';
+import { SecurityLog, SecurityMode } from '../types/security';
 
 const supabaseUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_URL) || 'https://nojbpgdtlrcdyxsvmluh.supabase.co';
 const supabaseAnonKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || 'sb_publishable_g8qFBCfqxyza6W2p0aIIkg_PEyxfmdl';
@@ -84,7 +84,8 @@ export function mapUserFromDb(row: any): User {
     createdAt: row.created_at || new Date().toISOString(),
     failedAttempts: Number(row.failed_attempts || 0),
     isLocked: Boolean(row.is_locked),
-    lockUntil: row.lock_until ? Number(row.lock_until) : undefined
+    lockUntil: row.lock_until ? Number(row.lock_until) : undefined,
+    securityMode: (row.security_mode === 'naive' ? 'naive' : 'secure') as SecurityMode
   };
 }
 
@@ -106,6 +107,7 @@ export function mapUserToDb(u: User): any {
     failed_attempts: u.failedAttempts || 0,
     is_locked: !!u.isLocked,
     lock_until: u.lockUntil || null,
+    security_mode: u.securityMode || 'secure',
     created_at: u.createdAt || new Date().toISOString()
   };
 }
@@ -297,6 +299,28 @@ export const dbService = {
   },
 
   // سجلات الأمان
+  async getSecurityLogs(): Promise<SecurityLog[]> {
+    const { data, error } = await supabase
+      .from('security_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.warn('Supabase fetch security logs warning:', error);
+      return [];
+    }
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      attackType: row.attack_type,
+      payload: row.payload,
+      blocked: Boolean(row.blocked),
+      details: row.details,
+      timestamp: new Date(row.created_at).toLocaleTimeString('ar-EG'),
+      mode: 'secure'
+    }));
+  },
+
   async logSecurityEvent(log: SecurityLog): Promise<void> {
     try {
       await supabase.from('security_logs').insert({
@@ -309,6 +333,14 @@ export const dbService = {
       });
     } catch (e) {
       // Non-blocking log
+    }
+  },
+
+  async clearSecurityLogs(): Promise<void> {
+    try {
+      await supabase.from('security_logs').delete().neq('id', '');
+    } catch (e) {
+      console.error('Supabase clear security logs error:', e);
     }
   }
 };

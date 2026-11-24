@@ -3,7 +3,7 @@ import { Product, CartItem, Order, OrderStatus, AdminKPIs } from '../types/ecomm
 import { User } from '../types/auth';
 import { Coupon } from '../types/coupon';
 import { SecurityMode, SecurityLog } from '../types/security';
-import { dbService } from '../services/supabaseService';
+import { supabase, dbService } from '../services/supabaseService';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS } from '../data/initialProducts';
 import { INITIAL_USERS, INITIAL_COUPONS } from '../data/initialSecurityData';
 import {
@@ -119,232 +119,101 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  PRODUCTS: 'secureshop_products_v2',
-  ORDERS: 'secureshop_orders_v2',
-  CART: 'secureshop_cart_v2',
-  WISHLIST: 'secureshop_wishlist_v2',
-  USERS: 'secureshop_users_v2',
-  CURRENT_USER: 'secureshop_current_user_v2',
-  COUPONS: 'secureshop_coupons_v2',
-  SECURITY_MODE: 'secureshop_sec_mode_v2',
-  SECURITY_LOGS: 'secureshop_sec_logs_v2',
-  CURRENT_VIEW: 'secureshop_current_view_v2',
-  ADMIN_TAB: 'secureshop_admin_tab_v2',
-  NEWSLETTER_CLAIMS: 'secureshop_newsletter_claims_v2'
+// تنظيف أي مخلفات قديمة في LocalStorage لضمان الاعتماد الحصري والمباشر على قاعدة البيانات Supabase
+if (typeof window !== 'undefined') {
+  const legacyKeys = [
+    'secureshop_products_v2',
+    'secureshop_orders_v2',
+    'secureshop_users_v2',
+    'secureshop_coupons_v2',
+    'secureshop_sec_logs_v2',
+    'secureshop_user_sec_modes_v2',
+    'secureshop_current_user_v2',
+    'secureshop_newsletter_claims_v2',
+    'secureshop_wishlist_v2'
+  ];
+  legacyKeys.forEach(k => {
+    try { localStorage.removeItem(k); } catch (e) {}
+  });
+}
+
+const SESSION_KEYS = {
+  CURRENT_USER_EMAIL: 'secureshop_session_email',
+  LOGGED_OUT: 'secureshop_logged_out',
+  CURRENT_VIEW: 'secureshop_current_view',
+  CART: 'secureshop_cart_session'
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // منتجات
-  const [products, setProducts] = useState<Product[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_PRODUCTS;
-  });
+  // منتجات المتجر (يتم جلبها مباشرة وحصرياً من Supabase)
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
 
-  // طلبات
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_ORDERS;
-  });
+  // طلبات العملاء (يتم جلبها مباشرة وحصرياً من Supabase)
+  const [orders, setOrders] = useState<Order[]>([]);
 
-  // سلة
+  // سلة المشتريات المؤقتة للجلسة الحالية
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const savedUserStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    let initialUser: User | null = null;
-    if (savedUserStr) {
-      try { initialUser = JSON.parse(savedUserStr); } catch (e) {}
-    }
-    const cartKey = initialUser ? `secureshop_cart_user_${initialUser.id}` : STORAGE_KEYS.CART;
-    const saved = localStorage.getItem(cartKey);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return [];
-  });
-
-  // مفضلة
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.WISHLIST);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return [];
-  });
-
-  // مستخدمون
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.USERS);
-    if (saved) {
-      try {
-        const parsed: User[] = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          let mapped: User[] = parsed.map((u: User) => {
-            // ضمان أن المشرف الوحيد هو admin@secureshop.edu
-            if (u.email.toLowerCase() === 'admin@secureshop.edu') {
-              return {
-                ...u,
-                role: 'admin' as const,
-                isConfirmed: true,
-                passwordHash: '2600fc73ca89dfbb3e70b75eb72a642306f6cb7072f2c218ae31c19addb4679b',
-                salt: 'salt_secureshop_admin_2026',
-                failedAttempts: 0,
-                isLocked: false
-              };
-            }
-            if (u.email.toLowerCase() === 'user@secureshop.edu') {
-              return {
-                ...u,
-                role: 'user' as const,
-                isConfirmed: true,
-                passwordHash: '1563ab57508234cbc48fb37ab8df3843f5767c3c062a9804e971341cc9d42b37',
-                salt: 'salt_secureshop_user_2026',
-                failedAttempts: 0,
-                isLocked: false
-              };
-            }
-            return { ...u, role: 'user' as const };
-          });
-
-          // دمج أوضاع الأمان المحفوظة لكل مستخدم
-          try {
-            const savedModesStr = localStorage.getItem('secureshop_user_sec_modes_v2');
-            if (savedModesStr) {
-              const savedModes = JSON.parse(savedModesStr) as Record<string, SecurityMode>;
-              mapped = mapped.map(u => ({
-                ...u,
-                securityMode: savedModes[u.id] || u.securityMode || 'secure'
-              }));
-            }
-          } catch (e) {}
-
-          return mapped;
-        }
-      } catch (e) { console.error(e); }
-    }
-    let initialList: User[] = INITIAL_USERS;
     try {
-      const savedModesStr = localStorage.getItem('secureshop_user_sec_modes_v2');
-      if (savedModesStr) {
-        const savedModes = JSON.parse(savedModesStr) as Record<string, SecurityMode>;
-        initialList = initialList.map(u => ({
-          ...u,
-          securityMode: savedModes[u.id] || u.securityMode || 'secure'
-        }));
-      }
-    } catch (e) {}
-    return initialList;
-  });
-
-  // المستخدم الحالي المسجل (افتراضياً زائر غير مسجل لفتح الموقع على الهوم)
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    if (saved) {
-      try { 
-        const parsed = JSON.parse(saved); 
-        if (parsed) {
-          if (parsed.email?.toLowerCase() !== 'admin@secureshop.edu') {
-            parsed.role = 'user';
-          }
-          // التحقق من الرصيد ووضع الأمان المحدث المحفوظ في قائمة المستخدمين
-          const savedUsersStr = localStorage.getItem(STORAGE_KEYS.USERS);
-          if (savedUsersStr) {
-            const parsedUsers = JSON.parse(savedUsersStr);
-            if (Array.isArray(parsedUsers)) {
-              const matched = parsedUsers.find((u: User) => 
-                u.id === parsed.id || u.email?.toLowerCase() === parsed.email?.toLowerCase()
-              );
-              if (matched) {
-                if (typeof matched.storeCredit === 'number') {
-                  parsed.storeCredit = matched.storeCredit;
-                }
-                if (matched.securityMode) {
-                  parsed.securityMode = matched.securityMode;
-                }
-              }
-            }
-          }
-          return parsed;
-        }
-      } catch (e) { console.error(e); }
-    }
-    return null; // يبدأ المتجر بزائر غير مسجل افتراضياً
-  });
-
-  // كوبونات
-  const [coupons, setCoupons] = useState<Coupon[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.COUPONS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return INITIAL_COUPONS;
-  });
-
-  // المطالبات المسجلة لكوبون النشرة البريدية (مرة واحدة فقط لكل حساب)
-  const [newsletterClaims, setNewsletterClaims] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.NEWSLETTER_CLAIMS);
+      const saved = sessionStorage.getItem(SESSION_KEYS.CART);
       return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error(e);
+    } catch {
       return [];
     }
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.NEWSLETTER_CLAIMS, JSON.stringify(newsletterClaims));
-  }, [newsletterClaims]);
+    try {
+      sessionStorage.setItem(SESSION_KEYS.CART, JSON.stringify(cart));
+    } catch {}
+  }, [cart]);
 
-  const hasClaimedNewsletter = (userOrEmail?: string): boolean => {
-    const emailToCheck = (userOrEmail || currentUser?.email || '').trim().toLowerCase();
-    const idToCheck = currentUser?.id || '';
-    if (emailToCheck && newsletterClaims.some(c => c.toLowerCase() === emailToCheck)) return true;
-    if (idToCheck && newsletterClaims.includes(idToCheck)) return true;
-    const welcomeCoupon = coupons.find(c => c.code === 'WELCOME15');
-    if (welcomeCoupon && idToCheck && welcomeCoupon.usedByUsers.includes(idToCheck)) return true;
-    return false;
-  };
+  // مفضلة المنتجات
+  const [wishlist, setWishlist] = useState<string[]>([]);
+
+  // مستخدمو النظام (يتم جلبهم ومزامنتهم مباشرة من Supabase)
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+
+  // المستخدم الحالي المسجل (يتم التحقق منه وجلب بياناته ورصيده من قاعدة البيانات بناءً على هوية الجلسة فقط)
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    if (localStorage.getItem(SESSION_KEYS.LOGGED_OUT) === 'true') {
+      return null;
+    }
+    const sessionEmail = localStorage.getItem(SESSION_KEYS.CURRENT_USER_EMAIL);
+    if (!sessionEmail) return null;
+    const fallback = INITIAL_USERS.find(u => u.email.toLowerCase() === sessionEmail.toLowerCase());
+    return fallback || null;
+  });
+
+  // كوبونات الخصم (من Supabase مباشرة)
+  const [coupons, setCoupons] = useState<Coupon[]>(INITIAL_COUPONS);
 
   // الكوبون الفعال بالسلة
   const [activeCoupon, setActiveCoupon] = useState<Coupon | null>(null);
 
-  // وضع الأمان (افتراضياً: Secure لحماية التطبيق)
-  const [securityMode, setSecurityMode] = useState<SecurityMode>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SECURITY_MODE);
-    return (saved === 'naive' ? 'naive' : 'secure');
-  });
+  // وضع الأمان
+  const [securityMode, setSecurityMode] = useState<SecurityMode>('secure');
 
-  // سجلات التدقيق الأمني
-  const [securityLogs, setSecurityLogs] = useState<SecurityLog[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.SECURITY_LOGS);
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return [];
-  });
+  // سجلات التدقيق الأمني (من Supabase)
+  const [securityLogs, setSecurityLogs] = useState<SecurityLog[]>([]);
 
-  // حالات العرض والتنقل مع الحفظ عند إعادة تحميل الصفحة (Refresh)
+  // حالات العرض والتنقل مع الحفاظ على الصفحة النشطة عند التحديث (Refresh)
   const [currentView, setCurrentViewState] = useState<'store' | 'admin'>(() => {
-    if (localStorage.getItem('secureshop_logged_out') === 'true') {
+    if (localStorage.getItem(SESSION_KEYS.LOGGED_OUT) === 'true') {
       return 'store';
     }
-    const savedUserStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-    if (!savedUserStr) {
+    const sessionEmail = localStorage.getItem(SESSION_KEYS.CURRENT_USER_EMAIL);
+    if (!sessionEmail) {
       return 'store';
     }
-    const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_VIEW);
+    const saved = sessionStorage.getItem(SESSION_KEYS.CURRENT_VIEW);
     return (saved === 'admin' ? 'admin' : 'store');
   });
 
   const setCurrentView = (view: 'store' | 'admin') => {
     setCurrentViewState(view);
-    localStorage.setItem(STORAGE_KEYS.CURRENT_VIEW, view);
+    sessionStorage.setItem(SESSION_KEYS.CURRENT_VIEW, view);
   };
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [rawSearchQuery, setRawSearchQuery] = useState('');
   const [searchWarning, setSearchWarning] = useState<string | null>(null);
@@ -361,52 +230,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
 
-  // حفظ التغييرات في LocalStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-  }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem(`secureshop_cart_user_${currentUser.id}`, JSON.stringify(cart));
-    } else {
-      localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cart));
+  // التحقق من استلام كوبون النشرة البريدية مباشرة من قاعدة البيانات
+  const hasClaimedNewsletter = (userOrEmail?: string): boolean => {
+    const emailToCheck = (userOrEmail || currentUser?.email || '').trim().toLowerCase();
+    const idToCheck = currentUser?.id || '';
+    const welcomeCoupon = coupons.find(c => c.code.toUpperCase() === 'WELCOME15');
+    if (welcomeCoupon && Array.isArray(welcomeCoupon.usedByUsers)) {
+      if (idToCheck && welcomeCoupon.usedByUsers.includes(idToCheck)) return true;
+      if (emailToCheck && welcomeCoupon.usedByUsers.some(u => u.toLowerCase() === emailToCheck)) return true;
     }
-  }, [cart]);
+    return false;
+  };
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.WISHLIST, JSON.stringify(wishlist));
-  }, [wishlist]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.COUPONS, JSON.stringify(coupons));
-  }, [coupons]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SECURITY_MODE, securityMode);
-  }, [securityMode]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SECURITY_LOGS, JSON.stringify(securityLogs));
-  }, [securityLogs]);
-
-  // مزامنة رصيد وبيانات المستخدم الحالي مع مصفوفة المستخدمين تلقائياً
+  // مزامنة رصيد وبيانات المستخدم الحالي مع مصفوفة المستخدمين تلقائياً في الذاكرة
   useEffect(() => {
     if (!currentUser) return;
     const freshInUsers = users.find(u => 
@@ -430,48 +266,24 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [users, currentUser?.id, currentUser?.email, currentUser?.storeCredit, currentUser?.securityMode]);
 
-  // مزامنة فورية بين التبويبات المتعددة (Multi-tab Real-time Sync)
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEYS.USERS && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed)) {
-            setUsers(parsed);
-          }
-        } catch {}
-      }
-      if (e.key === STORAGE_KEYS.CURRENT_USER && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (parsed) {
-            setCurrentUser(parsed);
-          }
-        } catch {}
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  // مزامنة فورية مع قاعدة بيانات Supabase الحية عند بدء التطبيق
+  // مزامنة حية كاملة مع قاعدة بيانات Supabase عند فتح التطبيق
   useEffect(() => {
     let isMounted = true;
 
     async function syncSupabase() {
       try {
-        const [remoteProducts, remoteUsers, remoteCoupons, remoteOrders] = await Promise.all([
+        const [remoteProducts, remoteUsers, remoteCoupons, remoteOrders, remoteLogs] = await Promise.all([
           dbService.getProducts(),
           dbService.getUsers(),
           dbService.getCoupons(),
-          dbService.getOrders()
+          dbService.getOrders(),
+          dbService.getSecurityLogs()
         ]);
 
         if (!isMounted) return;
 
         if (remoteProducts && remoteProducts.length > 0) {
           setProducts(remoteProducts);
-          localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(remoteProducts));
         }
 
         if (remoteUsers && remoteUsers.length > 0) {
@@ -482,43 +294,85 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             return { ...u, role: 'user' as const };
           });
           setUsers(sanitizedUsers);
-          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(sanitizedUsers));
 
-          // تحديث بيانات المستخدم الحالي النشط برصيده الحديث من قاعدة البيانات فوراً
-          setCurrentUser(prevUser => {
-            if (!prevUser) return null;
-            const fresh = sanitizedUsers.find(u => 
-              u.id === prevUser.id || u.email.toLowerCase() === prevUser.email.toLowerCase()
-            );
-            if (fresh) {
-              const updated = { 
-                ...prevUser, 
-                ...fresh,
-                role: (prevUser.email.toLowerCase() === 'admin@secureshop.edu' ? 'admin' : 'user') as ('admin' | 'user')
-              };
-              localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updated));
-              return updated;
+          // استعادة المستخدم النشط ورصيده ووضع أمانه من قاعدة البيانات مباشرة
+          const sessionEmail = localStorage.getItem(SESSION_KEYS.CURRENT_USER_EMAIL);
+          const isExplicitLoggedOut = localStorage.getItem(SESSION_KEYS.LOGGED_OUT) === 'true';
+
+          if (sessionEmail && !isExplicitLoggedOut) {
+            const matched = sanitizedUsers.find(u => u.email.toLowerCase() === sessionEmail.toLowerCase());
+            if (matched) {
+              setCurrentUser(matched);
+              if (matched.securityMode) {
+                setSecurityMode(matched.securityMode);
+              }
             }
-            return prevUser;
-          });
+          }
         }
 
         if (remoteCoupons && remoteCoupons.length > 0) {
           setCoupons(remoteCoupons);
-          localStorage.setItem(STORAGE_KEYS.COUPONS, JSON.stringify(remoteCoupons));
         }
 
         if (remoteOrders && remoteOrders.length > 0) {
           setOrders(remoteOrders);
-          localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(remoteOrders));
+        }
+
+        if (remoteLogs && remoteLogs.length > 0) {
+          setSecurityLogs(remoteLogs);
         }
       } catch (e) {
-        console.warn('Initial Supabase fetch:', e);
+        console.warn('Initial Supabase fetch warning:', e);
       }
     }
 
     syncSupabase();
     return () => { isMounted = false; };
+  }, []);
+
+  // اشتراك Realtime لحظي مع قاعدة بيانات Supabase لكافة التغييرات
+  useEffect(() => {
+    const channel = supabase
+      .channel('secureshop_realtime_db_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, async () => {
+        try {
+          const remoteUsers = await dbService.getUsers();
+          if (remoteUsers && remoteUsers.length > 0) {
+            const sanitized = remoteUsers.map(u => 
+              u.email.toLowerCase() === 'admin@secureshop.edu' ? { ...u, role: 'admin' as const } : { ...u, role: 'user' as const }
+            );
+            setUsers(sanitized);
+            const sessionEmail = localStorage.getItem(SESSION_KEYS.CURRENT_USER_EMAIL);
+            if (sessionEmail) {
+              const matched = sanitized.find(u => u.email.toLowerCase() === sessionEmail.toLowerCase());
+              if (matched) setCurrentUser(matched);
+            }
+          }
+        } catch (e) {}
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async () => {
+        try {
+          const remoteOrders = await dbService.getOrders();
+          if (remoteOrders) setOrders(remoteOrders);
+        } catch (e) {}
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
+        try {
+          const remoteProducts = await dbService.getProducts();
+          if (remoteProducts) setProducts(remoteProducts);
+        } catch (e) {}
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coupons' }, async () => {
+        try {
+          const remoteCoupons = await dbService.getCoupons();
+          if (remoteCoupons) setCoupons(remoteCoupons);
+        } catch (e) {}
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // إدارة سجلات الأمان
@@ -535,6 +389,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const clearSecurityLogs = () => {
     setSecurityLogs([]);
+    dbService.clearSecurityLogs().catch(console.error);
   };
 
   const toggleSecurityMode = () => {
@@ -693,11 +548,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clearCart = () => {
     setCart([]);
     setActiveCoupon(null);
-    if (currentUser) {
-      localStorage.removeItem(`secureshop_cart_user_${currentUser.id}`);
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.CART);
-    }
+    try {
+      sessionStorage.removeItem(SESSION_KEYS.CART);
+    } catch {}
   };
 
   const openCheckoutWithSingleProduct = (product: Product, quantity = 1) => {
@@ -854,8 +707,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
     }
 
-    // تسجيل استلام الكوبون لهذا الحساب (مرة واحدة فقط)
-    setNewsletterClaims(prev => Array.from(new Set([...prev, cleanUserEmail, currentUser.id])));
+    // تسجيل استلام الكوبون لهذا الحساب مباشرة في قاعدة البيانات
+    const welcomeCoupon = coupons.find(c => c.code === 'WELCOME15');
+    if (welcomeCoupon) {
+      const updatedCoupon: Coupon = {
+        ...welcomeCoupon,
+        usedByUsers: Array.from(new Set([...(welcomeCoupon.usedByUsers || []), cleanUserEmail, currentUser.id]))
+      };
+      setCoupons(prev => prev.map(c => c.id === welcomeCoupon.id ? updatedCoupon : c));
+      dbService.upsertCoupon(updatedCoupon).catch(console.error);
+    }
 
     addSecurityLog({
       attackType: 'Newsletter Subscription & Single-Use Coupon Issued',
@@ -864,7 +725,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       details: 'تم إصدار كوبون الترحيب WELCOME15 بنجاح للمستخدم بعد التحقق الصارم من بريده'
     });
 
-    const welcomeCoupon = coupons.find(c => c.code === 'WELCOME15');
     return {
       success: true,
       code: welcomeCoupon ? welcomeCoupon.code : 'WELCOME15',
@@ -937,7 +797,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         lockUntil: lockUntilTime
       } : u);
       setUsers(updatedUsers);
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers));
+      const lockedOrAttemptUser = updatedUsers.find(u => u.id === user.id);
+      if (lockedOrAttemptUser) {
+        dbService.upsertUser(lockedOrAttemptUser).catch(console.error);
+      }
 
       return {
         success: false,
@@ -973,7 +836,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
     }
 
-    // نجاح تسجيل الدخول - إعادة تعيين المحاولات الفاشلة وحفظ الحالة فوراً في التخزين
+    // نجاح تسجيل الدخول - إعادة تعيين المحاولات الفاشلة وتحديث الجلسة
     const updatedUser: User = { 
       ...user, 
       isConfirmed: (user.role === 'admin' || user.isConfirmed),
@@ -983,23 +846,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     const updatedUsers = users.map(u => u.id === user.id ? updatedUser : u);
     setUsers(updatedUsers);
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers));
     setCurrentUser(updatedUser);
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedUser));
-    localStorage.removeItem('secureshop_logged_out');
-
-    // استرجاع السلة المحفوظة الخاصة بهذا المستخدم تحديداً
-    const userCartKey = `secureshop_cart_user_${user.id}`;
-    const savedUserCart = localStorage.getItem(userCartKey);
-    if (savedUserCart) {
-      try {
-        setCart(JSON.parse(savedUserCart));
-      } catch (e) {
-        setCart([]);
-      }
-    } else {
-      setCart([]);
-    }
+    localStorage.setItem(SESSION_KEYS.CURRENT_USER_EMAIL, cleanEmail);
+    localStorage.removeItem(SESSION_KEYS.LOGGED_OUT);
+    dbService.upsertUser(updatedUser).catch(console.error);
 
     addSecurityLog({
       attackType: 'User Authentication',
@@ -1054,7 +904,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const updatedUsers = [...users, newUser];
     setUsers(updatedUsers);
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers));
     dbService.upsertUser(newUser).catch(console.error);
 
     return {
@@ -1075,23 +924,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return { success: false, error: 'رمز التأكيد غير صحيح! يرجى التأكد من الرمز المطبوع في التيرمينال' };
     }
 
-    // تأكيد الحساب نهائياً وحفظه فوراً في LocalStorage و Supabase
+    // تأكيد الحساب نهائياً وحفظه فوراً في Supabase
     const confirmedUser: User = { ...user, isConfirmed: true, failedAttempts: 0, isLocked: false };
     const updatedUsers = users.map(u => u.id === user.id ? confirmedUser : u);
     setUsers(updatedUsers);
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedUsers));
     setCurrentUser(confirmedUser);
-    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(confirmedUser));
-    localStorage.removeItem('secureshop_logged_out');
+    localStorage.setItem(SESSION_KEYS.CURRENT_USER_EMAIL, cleanEmail);
+    localStorage.removeItem(SESSION_KEYS.LOGGED_OUT);
     dbService.upsertUser(confirmedUser).catch(console.error);
-
-    const userCartKey = `secureshop_cart_user_${user.id}`;
-    const savedUserCart = localStorage.getItem(userCartKey);
-    if (savedUserCart) {
-      try { setCart(JSON.parse(savedUserCart)); } catch (e) { setCart([]); }
-    } else {
-      setCart([]);
-    }
 
     addSecurityLog({
       attackType: 'Account Confirmation',
@@ -1104,20 +944,19 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const logout = () => {
-    // 1. حفظ سلة المستخدم الحالي في المتصفح قبل الخروج حتى يستعيدها عند العودة
-    if (currentUser) {
-      localStorage.setItem(`secureshop_cart_user_${currentUser.id}`, JSON.stringify(cart));
-    }
-    // 2. تصفير السلة بالكامل في واجهة الموقع
+    // 1. تصفير السلة بالكامل في واجهة الموقع وجلسة التصفح
     setCart([]);
     setActiveCoupon(null);
-    // 3. مسح المستخدم النشط وتسجيل حالة الخروج
+    try {
+      sessionStorage.removeItem(SESSION_KEYS.CART);
+    } catch {}
+    // 2. مسح المستخدم النشط وتسجيل حالة الخروج
     setCurrentUser(null);
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-    localStorage.setItem('secureshop_logged_out', 'true');
-    // 4. الانتقال لصفحة الهوم فوراً وإغلاق أي نوافذ منبثقة
+    localStorage.removeItem(SESSION_KEYS.CURRENT_USER_EMAIL);
+    localStorage.setItem(SESSION_KEYS.LOGGED_OUT, 'true');
+    // 3. الانتقال لصفحة الهوم فوراً وإغلاق أي نوافذ منبثقة
     setCurrentView('store');
-    localStorage.setItem(STORAGE_KEYS.CURRENT_VIEW, 'store');
+    sessionStorage.setItem(SESSION_KEYS.CURRENT_VIEW, 'store');
     setIsProfileOpen(false);
     setIsCartOpen(false);
     setIsCheckoutOpen(false);
@@ -1204,10 +1043,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUsers(prev => prev.filter(u => u.id !== userId));
     dbService.deleteUser(userId).catch(console.error);
 
-    try {
-      localStorage.removeItem('dukkan_cart_' + userId);
-    } catch {}
-
     if (currentUser?.id === userId) {
       logout();
     }
@@ -1238,63 +1073,34 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     const updatedUserObj = { ...targetUser, storeCredit: newCredit };
 
-    setUsers(prev => {
-      const updatedList = prev.map(u => u.id === userId ? updatedUserObj : u);
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedList));
-      return updatedList;
-    });
-
+    setUsers(prev => prev.map(u => u.id === userId ? updatedUserObj : u));
     dbService.upsertUser(updatedUserObj).catch(console.error);
 
-    // إذا كان المستخدم المحفوظ في الجلسة الحالية هو نفس المستخدم، يتم تحديث رصيده فوراً
-    try {
-      const savedUserStr = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      if (savedUserStr) {
-        const savedUser = JSON.parse(savedUserStr);
-        if (savedUser.id === userId || savedUser.email?.toLowerCase() === targetUser.email.toLowerCase()) {
-          const updatedSaved = { ...savedUser, storeCredit: newCredit };
-          localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(updatedSaved));
-          setCurrentUser(prev => prev ? { ...prev, storeCredit: newCredit } : null);
-        }
-      }
-    } catch (e) {}
+    // إذا كان المستخدم في الجلسة الحالية هو نفس المستخدم، يتم تحديث رصيده فوراً في الذاكرة
+    if (currentUser?.id === userId || currentUser?.email?.toLowerCase() === targetUser.email.toLowerCase()) {
+      setCurrentUser(prev => prev ? { ...prev, storeCredit: newCredit } : null);
+    }
   };
 
   const toggleUserSecurityMode = (userId: string) => {
-    let targetMode: SecurityMode = 'secure';
+    const targetUser = users.find(u => u.id === userId);
+    if (!targetUser) return;
+    const nextMode: SecurityMode = (targetUser.securityMode === 'naive' ? 'secure' : 'naive');
+    const updatedUser = { ...targetUser, securityMode: nextMode };
 
-    setUsers(prev => {
-      const updatedList = prev.map(u => {
-        if (u.id === userId) {
-          const nextMode: SecurityMode = (u.securityMode === 'naive' ? 'secure' : 'naive');
-          targetMode = nextMode;
-          return { ...u, securityMode: nextMode };
-        }
-        return u;
-      });
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(updatedList));
-      return updatedList;
-    });
+    setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    dbService.upsertUser(updatedUser).catch(console.error);
 
-    try {
-      const savedModesStr = localStorage.getItem('secureshop_user_sec_modes_v2');
-      const savedModes = savedModesStr ? JSON.parse(savedModesStr) : {};
-      savedModes[userId] = targetMode;
-      localStorage.setItem('secureshop_user_sec_modes_v2', JSON.stringify(savedModes));
-    } catch (e) {
-      console.error(e);
-    }
-
-    if (currentUser?.id === userId) {
-      setCurrentUser(prev => prev ? { ...prev, securityMode: targetMode } : null);
-      setSecurityMode(targetMode);
+    if (currentUser?.id === userId || currentUser?.email?.toLowerCase() === targetUser.email.toLowerCase()) {
+      setCurrentUser(prev => prev ? { ...prev, securityMode: nextMode } : null);
+      setSecurityMode(nextMode);
     }
 
     addSecurityLog({
       attackType: 'User Security Mode Toggled',
-      payload: `UserId: ${userId} -> ${targetMode.toUpperCase()}`,
+      payload: `UserId: ${userId} -> ${nextMode.toUpperCase()}`,
       blocked: false,
-      details: `قام مسؤول النظام بتبديل وضع الأمان للمستخدم إلى: ${targetMode === 'secure' ? '🛡️ الآمن (SecureShop)' : '⚠️ الساذج (Naive)'}`
+      details: `قام مسؤول النظام بتبديل وضع الأمان للمستخدم إلى: ${nextMode === 'secure' ? '🛡️ الآمن (SecureShop)' : '⚠️ الساذج (Naive)'}`
     });
   };
 
@@ -1448,7 +1254,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     totalProductsCount: products.length
   };
 
-  const resetToDefaults = () => {
+  const resetToDefaults = async () => {
     setProducts(INITIAL_PRODUCTS);
     setOrders(INITIAL_ORDERS);
     setCart([]);
@@ -1459,8 +1265,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveCoupon(null);
     setSecurityMode('secure');
     setSecurityLogs([]);
-    setNewsletterClaims([]);
-    localStorage.clear();
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {}
+    for (const p of INITIAL_PRODUCTS) await dbService.upsertProduct(p).catch(() => {});
+    for (const u of INITIAL_USERS) await dbService.upsertUser(u).catch(() => {});
+    for (const c of INITIAL_COUPONS) await dbService.upsertCoupon(c).catch(() => {});
   };
 
   return (
