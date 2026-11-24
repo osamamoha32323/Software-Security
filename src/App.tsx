@@ -25,6 +25,7 @@ import {
 const StoreContent: React.FC = () => {
   const { 
     currentView, 
+    currentUser,
     products, 
     searchQuery, 
     setSearchQuery,
@@ -180,10 +181,12 @@ const StoreContent: React.FC = () => {
             </div>
           </section>
 
-          {/* قسم النشرة البريدية والكوبونات الترحيبية */}
-          <div className="container">
-            <NewsletterSection />
-          </div>
+          {/* قسم النشرة البريدية والكوبونات الترحيبية (يظهر للعملاء فقط ويُخفى تماماً عند الدخول بحساب المشرف Admin) */}
+          {currentUser?.role !== 'admin' && (
+            <div className="container">
+              <NewsletterSection />
+            </div>
+          )}
         </main>
       )}
 

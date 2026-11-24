@@ -92,6 +92,7 @@ interface StoreContextType {
   deleteCoupon: (id: string) => void;
   toggleCouponActive: (id: string) => void;
   subscribeNewsletter: (email: string) => { success: boolean; code?: string; message: string };
+  hasClaimedNewsletter: (userOrEmail?: string) => boolean;
 
   // الأمان والوضع الساذج (Security Engine & Demonstration)
   securityMode: SecurityMode;
@@ -128,7 +129,8 @@ const STORAGE_KEYS = {
   SECURITY_MODE: 'secureshop_sec_mode_v2',
   SECURITY_LOGS: 'secureshop_sec_logs_v2',
   CURRENT_VIEW: 'secureshop_current_view_v2',
-  ADMIN_TAB: 'secureshop_admin_tab_v2'
+  ADMIN_TAB: 'secureshop_admin_tab_v2',
+  NEWSLETTER_CLAIMS: 'secureshop_newsletter_claims_v2'
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -251,6 +253,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return INITIAL_COUPONS;
   });
+
+  // المطالبات المسجلة لكوبون النشرة البريدية (مرة واحدة فقط لكل حساب)
+  const [newsletterClaims, setNewsletterClaims] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.NEWSLETTER_CLAIMS);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.NEWSLETTER_CLAIMS, JSON.stringify(newsletterClaims));
+  }, [newsletterClaims]);
+
+  const hasClaimedNewsletter = (userOrEmail?: string): boolean => {
+    const emailToCheck = (userOrEmail || currentUser?.email || '').trim().toLowerCase();
+    const idToCheck = currentUser?.id || '';
+    if (emailToCheck && newsletterClaims.some(c => c.toLowerCase() === emailToCheck)) return true;
+    if (idToCheck && newsletterClaims.includes(idToCheck)) return true;
+    const welcomeCoupon = coupons.find(c => c.code === 'WELCOME15');
+    if (welcomeCoupon && idToCheck && welcomeCoupon.usedByUsers.includes(idToCheck)) return true;
+    return false;
+  };
 
   // الكوبون الفعال بالسلة
   const [activeCoupon, setActiveCoupon] = useState<Coupon | null>(null);
@@ -724,18 +751,80 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
   };
 
-  // النشرة البريدية
-  const subscribeNewsletter = (email: string) => {
+  // النشرة البريدية مع التحقق الصارم من هوية المستخدم ومنع تكرار الكوبون
+  const subscribeNewsletter = (email: string): { success: boolean; code?: string; message: string } => {
     if (!email || !email.includes('@')) {
       return { success: false, message: 'يرجى إدخال بريد إلكتروني صالح' };
     }
 
-    // إصدار كوبون ترحيب WELCOME15 تلقائياً
+    // 1. التحقق من تسجيل الدخول
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      setAuthModalTab('login');
+      return {
+        success: false,
+        message: 'يرجى تسجيل الدخول بحسابك أولاً للحصول على كوبون الخصم الخاص بك.'
+      };
+    }
+
+    // 2. منع حسابات الإدارة من الحصول على كوبونات شراء
+    if (currentUser.role === 'admin') {
+      return {
+        success: false,
+        message: 'حساب إدارة النظام محمي وغير مصرح له بالمطالبة بكوبونات التسوق.'
+      };
+    }
+
+    const cleanEnteredEmail = email.trim().toLowerCase();
+    const cleanUserEmail = currentUser.email.trim().toLowerCase();
+
+    // 3. التحقق الصارم من تطابق البريد الإلكتروني مع بريد الحساب المسجل به (ممنوع أي إيميل آخر)
+    if (cleanEnteredEmail !== cleanUserEmail) {
+      if (securityMode === 'secure') {
+        addSecurityLog({
+          attackType: 'Email Mismatch / Coupon Hijacking (Blocked)',
+          payload: `Entered: ${cleanEnteredEmail} vs Registered: ${cleanUserEmail}`,
+          blocked: true,
+          details: 'محاولة إدخال بريد إلكتروني مختلف عن البريد المسجل للحساب للحصول على كوبون'
+        });
+      }
+      return {
+        success: false,
+        message: `ممنوع استخدام بريد إلكتروني مختلف! يجب إدخال نفس البريد الإلكتروني المسجل به حسابك الحالي (${currentUser.email}) فقط.`
+      };
+    }
+
+    // 4. فحص هل استلم المستخدم الكوبون مسبقاً (مرة واحدة فقط لكل حساب)
+    if (hasClaimedNewsletter(cleanUserEmail)) {
+      if (securityMode === 'secure') {
+        addSecurityLog({
+          attackType: 'Coupon Multi-Claim / Replay Attempt (Blocked)',
+          payload: `Email: ${cleanUserEmail}`,
+          blocked: true,
+          details: 'محاولة الحصول على كوبون الترحيب أكثر من مرة لنفس الحساب'
+        });
+      }
+      return {
+        success: false,
+        message: 'لقد حصلت بالفعل على هذا الكوبون مسبقاً! هذا الكوبون مخصص للاستخدام مرة واحدة فقط لكل حساب.'
+      };
+    }
+
+    // تسجيل استلام الكوبون لهذا الحساب (مرة واحدة فقط)
+    setNewsletterClaims(prev => Array.from(new Set([...prev, cleanUserEmail, currentUser.id])));
+
+    addSecurityLog({
+      attackType: 'Newsletter Subscription & Single-Use Coupon Issued',
+      payload: `Email: ${cleanUserEmail}`,
+      blocked: false,
+      details: 'تم إصدار كوبون الترحيب WELCOME15 بنجاح للمستخدم بعد التحقق الصارم من بريده'
+    });
+
     const welcomeCoupon = coupons.find(c => c.code === 'WELCOME15');
     return {
       success: true,
       code: welcomeCoupon ? welcomeCoupon.code : 'WELCOME15',
-      message: 'شكراً لاشتراكك! تم منحك كود خصم 15%: WELCOME15 جاهز للاستخدام عند إتمام الطلب.'
+      message: 'تم التحقق من بريدك بنجاح! تم إصدار كود الخصم الترحيبي 15% (WELCOME15) المخصص لحسابك.'
     };
   };
 
@@ -1288,6 +1377,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveCoupon(null);
     setSecurityMode('secure');
     setSecurityLogs([]);
+    setNewsletterClaims([]);
     localStorage.clear();
   };
 
@@ -1357,6 +1447,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteCoupon,
         toggleCouponActive,
         subscribeNewsletter,
+        hasClaimedNewsletter,
         securityMode,
         toggleSecurityMode,
         setSecurityMode,
