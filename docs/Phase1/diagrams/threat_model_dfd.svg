@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 800" width="100%" height="100%" style="background:#030712; font-family:system-ui, -apple-system, sans-serif;">
+  <defs>
+    <filter id="shadow-dfd" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+    <marker id="m-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="m-warn" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#ef4444"/>
+    </marker>
+  </defs>
+
+  <!-- Title Banner -->
+  <text x="550" y="40" text-anchor="middle" fill="#f8fafc" font-size="22" font-weight="800">SecureShop STRIDE Threat Model &amp; Data Flow Diagram (DFD Level 1)</text>
+  <text x="550" y="65" text-anchor="middle" fill="#94a3b8" font-size="13">Mapping Adversary Entry Points, Interceptors, and Threat Boundaries</text>
+
+  <!-- TRUST BOUNDARY 1 (External to Client) -->
+  <rect x="30" y="85" width="1040" height="690" rx="16" fill="none" stroke="#334155" stroke-width="1.5"/>
+  
+  <!-- EXTERNAL ENTITIES (Left Column) -->
+  <g transform="translate(60, 120)" filter="url(#shadow-dfd)">
+    <rect x="0" y="0" width="180" height="90" rx="8" fill="#111827" stroke="#38bdf8" stroke-width="2"/>
+    <text x="90" y="32" text-anchor="middle" fill="#e0f2fe" font-size="12" font-weight="700">External Visitor /</text>
+    <text x="90" y="50" text-anchor="middle" fill="#e0f2fe" font-size="12" font-weight="700">Registered Customer</text>
+    <text x="90" y="72" text-anchor="middle" fill="#94a3b8" font-size="10">[Threat Actor T-01 / T-02]</text>
+  </g>
+
+  <g transform="translate(60, 370)" filter="url(#shadow-dfd)">
+    <rect x="0" y="0" width="180" height="90" rx="8" fill="#111827" stroke="#ef4444" stroke-width="2"/>
+    <text x="90" y="32" text-anchor="middle" fill="#fee2e2" font-size="12" font-weight="700">Adversary / Attacker</text>
+    <text x="90" y="50" text-anchor="middle" fill="#f87171" font-size="11">XSS, SQLi, Brute-Force</text>
+    <text x="90" y="72" text-anchor="middle" fill="#fca5a5" font-size="10">[Threat Actor T-03 / T-04]</text>
+  </g>
+
+  <g transform="translate(60, 620)" filter="url(#shadow-dfd)">
+    <rect x="0" y="0" width="180" height="90" rx="8" fill="#111827" stroke="#fbbf24" stroke-width="2"/>
+    <text x="90" y="32" text-anchor="middle" fill="#fef3c7" font-size="12" font-weight="700">System Administrator</text>
+    <text x="90" y="50" text-anchor="middle" fill="#fde68a" font-size="11">admin@secureshop.edu</text>
+    <text x="90" y="72" text-anchor="middle" fill="#f59e0b" font-size="10">[Sole Admin Protected]</text>
+  </g>
+
+  <!-- TRUST BOUNDARY LINE (Vertical) -->
+  <line x1="280" y1="100" x2="280" y2="750" stroke="#ef4444" stroke-width="2" stroke-dasharray="8 6"/>
+  <rect x="250" y="420" width="60" height="24" rx="4" fill="#991b1b"/>
+  <text x="280" y="436" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="800">TB-1</text>
+
+  <!-- PROCESSES (Middle Column) -->
+  <g transform="translate(350, 110)" filter="url(#shadow-dfd)">
+    <circle cx="90" cy="50" r="50" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2"/>
+    <text x="90" y="42" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">P1.0: Auth &amp;</text>
+    <text x="90" y="58" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">Credentials</text>
+    <rect x="15" y="105" width="150" height="20" rx="4" fill="#7f1d1d"/>
+    <text x="90" y="119" text-anchor="middle" fill="#fecaca" font-size="9">Threats: S-01, D-01, E-01</text>
+  </g>
+
+  <g transform="translate(350, 260)" filter="url(#shadow-dfd)">
+    <circle cx="90" cy="50" r="50" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2"/>
+    <text x="90" y="42" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">P2.0: Search &amp;</text>
+    <text x="90" y="58" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">Catalogue</text>
+    <rect x="15" y="105" width="150" height="20" rx="4" fill="#7f1d1d"/>
+    <text x="90" y="119" text-anchor="middle" fill="#fecaca" font-size="9">Threats: T-01, I-01 (XSS/SQLi)</text>
+  </g>
+
+  <g transform="translate(350, 410)" filter="url(#shadow-dfd)">
+    <circle cx="90" cy="50" r="50" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2"/>
+    <text x="90" y="42" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">P3.0: Cart &amp;</text>
+    <text x="90" y="58" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">Quantities</text>
+    <rect x="15" y="105" width="150" height="20" rx="4" fill="#7f1d1d"/>
+    <text x="90" y="119" text-anchor="middle" fill="#fecaca" font-size="9">Threats: T-02 (Negative Qty)</text>
+  </g>
+
+  <g transform="translate(350, 560)" filter="url(#shadow-dfd)">
+    <circle cx="90" cy="50" r="50" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2"/>
+    <text x="90" y="42" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">P4.0: Checkout &amp;</text>
+    <text x="90" y="58" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">Settlement</text>
+    <rect x="15" y="105" width="150" height="20" rx="4" fill="#7f1d1d"/>
+    <text x="90" y="119" text-anchor="middle" fill="#fecaca" font-size="9">Threats: T-03, R-01 (Credit/Coup)</text>
+  </g>
+
+  <g transform="translate(580, 560)" filter="url(#shadow-dfd)">
+    <circle cx="90" cy="50" r="50" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2"/>
+    <text x="90" y="42" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">P5.0: Orders &amp;</text>
+    <text x="90" y="58" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">IDOR Guard</text>
+    <rect x="15" y="105" width="150" height="20" rx="4" fill="#7f1d1d"/>
+    <text x="90" y="119" text-anchor="middle" fill="#fecaca" font-size="9">Threats: I-02 (IDOR Leakage)</text>
+  </g>
+
+  <g transform="translate(580, 260)" filter="url(#shadow-dfd)">
+    <circle cx="90" cy="50" r="50" fill="#831843" stroke="#f43f5e" stroke-width="2"/>
+    <text x="90" y="42" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">P6.0: Admin</text>
+    <text x="90" y="58" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700">RBAC Guard</text>
+    <rect x="15" y="105" width="150" height="20" rx="4" fill="#7f1d1d"/>
+    <text x="90" y="119" text-anchor="middle" fill="#fecaca" font-size="9">Threats: E-02 (Vert. Escalation)</text>
+  </g>
+
+  <!-- DATA STORES (Right Column) -->
+  <g transform="translate(820, 120)" filter="url(#shadow-dfd)">
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#a855f7" stroke-width="3"/>
+    <line x1="0" y1="70" x2="200" y2="70" stroke="#a855f7" stroke-width="3"/>
+    <rect x="0" y="0" width="200" height="70" fill="#1e1035"/>
+    <text x="100" y="30" text-anchor="middle" fill="#e9d5ff" font-size="12" font-weight="700">D1: Users Store</text>
+    <text x="100" y="50" text-anchor="middle" fill="#d8b4fe" font-size="10">PBKDF2 Hashes, Salts, Credits</text>
+  </g>
+
+  <g transform="translate(820, 250)" filter="url(#shadow-dfd)">
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#a855f7" stroke-width="3"/>
+    <line x1="0" y1="70" x2="200" y2="70" stroke="#a855f7" stroke-width="3"/>
+    <rect x="0" y="0" width="200" height="70" fill="#1e1035"/>
+    <text x="100" y="30" text-anchor="middle" fill="#e9d5ff" font-size="12" font-weight="700">D2: Products Catalog</text>
+    <text x="100" y="50" text-anchor="middle" fill="#d8b4fe" font-size="10">Active Items, Stock, Taager Costs</text>
+  </g>
+
+  <g transform="translate(820, 380)" filter="url(#shadow-dfd)">
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#a855f7" stroke-width="3"/>
+    <line x1="0" y1="70" x2="200" y2="70" stroke="#a855f7" stroke-width="3"/>
+    <rect x="0" y="0" width="200" height="70" fill="#1e1035"/>
+    <text x="100" y="30" text-anchor="middle" fill="#e9d5ff" font-size="12" font-weight="700">D3: Coupons Ledger</text>
+    <text x="100" y="50" text-anchor="middle" fill="#d8b4fe" font-size="10">used_by_users[], Expiration</text>
+  </g>
+
+  <g transform="translate(820, 510)" filter="url(#shadow-dfd)">
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#a855f7" stroke-width="3"/>
+    <line x1="0" y1="70" x2="200" y2="70" stroke="#a855f7" stroke-width="3"/>
+    <rect x="0" y="0" width="200" height="70" fill="#1e1035"/>
+    <text x="100" y="30" text-anchor="middle" fill="#e9d5ff" font-size="12" font-weight="700">D4: Orders Invoices</text>
+    <text x="100" y="50" text-anchor="middle" fill="#d8b4fe" font-size="10">user_id, Totals, Customer PII</text>
+  </g>
+
+  <g transform="translate(820, 640)" filter="url(#shadow-dfd)">
+    <line x1="0" y1="0" x2="200" y2="0" stroke="#f43f5e" stroke-width="3"/>
+    <line x1="0" y1="70" x2="200" y2="70" stroke="#f43f5e" stroke-width="3"/>
+    <rect x="0" y="0" width="200" height="70" fill="#1e1035"/>
+    <text x="100" y="30" text-anchor="middle" fill="#fecdd3" font-size="12" font-weight="700">D5: Security Audit Logs</text>
+    <text x="100" y="50" text-anchor="middle" fill="#fda4af" font-size="10">Attack Payloads, Blocks, Hub</text>
+  </g>
+
+  <!-- TRUST BOUNDARY LINE 2 (Between Processes and Data Stores) -->
+  <line x1="770" y1="100" x2="770" y2="750" stroke="#eab308" stroke-width="2" stroke-dasharray="8 6"/>
+  <rect x="740" y="420" width="60" height="24" rx="4" fill="#854d0e"/>
+  <text x="770" y="436" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="800">TB-2</text>
+
+  <!-- Connectors -->
+  <!-- Entity to Processes -->
+  <path d="M 240 160 L 350 160" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#m-arrow)"/>
+  <path d="M 240 400 L 350 310" stroke="#ef4444" stroke-width="1.5" marker-end="url(#m-warn)"/>
+  <path d="M 240 420 L 350 460" stroke="#ef4444" stroke-width="1.5" marker-end="url(#m-warn)"/>
+  <path d="M 240 660 L 350 610" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#m-arrow)"/>
+  <path d="M 240 640 L 580 310" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#m-arrow)"/>
+
+  <!-- Processes to Data Stores -->
+  <path d="M 530 160 L 820 160" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#m-arrow)"/>
+  <path d="M 530 310 L 820 280" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#m-arrow)"/>
+  <path d="M 530 610 L 820 410" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#m-arrow)"/>
+  <path d="M 760 610 L 820 540" stroke="#38bdf8" stroke-width="1.5" marker-end="url(#m-arrow)"/>
+  <path d="M 530 460 L 820 670" stroke="#f43f5e" stroke-width="1.5" marker-end="url(#m-warn)"/>
+</svg>
