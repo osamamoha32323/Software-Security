@@ -232,7 +232,7 @@ The following demonstration accounts are configured in the live database for tes
 | Account Type | Email Address | Assigned Role | Initial Wallet Balance | Account Password |
 |:---|:---|:---:|:---:|:---|
 | **System Administrator** | `admin@secureshop.edu` | `admin` | — | `Provided privately for evaluation` |
-| **Standard Customer** | `user@secureshop.edu` | `user` | 5,000 EGP | `Provided privately for evaluation` |
+| **Standard Customer** | `user@secureshop.edu` | `user` | 1,000 EGP | `Provided privately for evaluation` |
 
 > [!WARNING]
 > **Credential Security Notice:** In accordance with secure software development standards, plaintext demonstration passwords have been removed from all tracked documentation. Any credentials previously committed to public Git history have been sanitized and must be rotated prior to any production deployment.
