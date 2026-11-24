@@ -6,6 +6,8 @@
 > **Course:** CET431 — Software Security | Fall 2026  
 > **Milestone:** Project Phase 1 Submission & Week 10 Oral Defense (5 Marks)  
 > **Document Identifier:** `SEC-TM-2026-PH1-V1.0`  
+> **Developer:** Osama Mohamed Moawad Zaytoun (Student ID: 230105355)  
+> **Implementation Mode:** Individual Project Implementation (Course standard team size: 6; subject to instructor approval)  
 > **Methodology:** STRIDE (Microsoft Threat Modeling Standard) & OWASP Top 10 (2021)  
 > **Artifact References:** DFD Vector Diagram in `docs/Phase1/diagrams/threat_model_dfd.svg`  
 
@@ -383,7 +385,9 @@ Each threat is assessed using the **STRIDE** methodology, documenting real vulne
 
 This threat model reflects the verified architecture and defensive controls implemented within Phase 1 of SecureShop.
 
-- **Threat Modeling Lead:** Eng. Red Member 2 (Access Control & IDOR Specialist)
-- **Defensive Engineering Reviewer:** Eng. Blue Member 3 (Business Logic & Data Sanitization Lead)
+- **Developer & Sole Author:** Osama Mohamed Moawad Zaytoun
+- **Student ID:** 230105355
+- **Academic Course:** CET431 — Software Security
+- **Department:** Computer Engineering Technology, Elsewedy University of Technology
 - **Evaluation Milestone:** University Oral Defense — Week 10
 - **Status:** Phase 1 Threat Model Approved

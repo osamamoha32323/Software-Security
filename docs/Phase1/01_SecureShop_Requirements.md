@@ -6,7 +6,8 @@
 > **Course:** CET431 — Software Security | Fall 2026  
 > **Milestone:** Project Phase 1 Submission & Week 10 Oral Defense (5 Marks)  
 > **Document Identifier:** `SEC-SRS-2026-PH1-V1.0`  
-> **Authoring Group:** Senior Software Architecture & Application Security Engineering Team  
+> **Developer:** Osama Mohamed Moawad Zaytoun (Student ID: 230105355)  
+> **Implementation Mode:** Individual Project Implementation (Course standard team size: 6; subject to instructor approval)  
 
 ---
 
@@ -163,7 +164,7 @@ graph TD
 
 #### FR-04: User Logout & Session Invalidation
 - **Description:** Terminates current authenticated session.
-- **Processing Logic:** Clears `currentUser` state, removes `STORAGE_KEYS.CURRENT_USER` from LocalStorage, resets view to `'store'`, and sets `secureshop_logged_out` flag to prevent unauthorized automatic session restoration on browser refresh.
+- **Processing Logic:** Clears `currentUser` state, invalidates session storage (`secureshop_session_email`), resets view to `'store'`, and sets `secureshop_logged_out` flag to prevent unauthorized automatic session restoration on browser refresh.
 - **Code Trace:** `src/context/StoreContext.tsx` (`logout`).
 
 #### FR-05: Product Catalogue Browsing
@@ -182,7 +183,7 @@ graph TD
 - **Validation Rules:**
   - Quantity modifications pass through `validateCartQuantity`.
   - Rejects negative numbers (`-1`), zero (`0`), floating-point values, and quantities exceeding available inventory (`stock`).
-  - Persists across browser tab reloads via `STORAGE_KEYS.CART`.
+  - Persists across browser tab reloads via transient session storage.
 - **Code Trace:** `src/components/customer/CartDrawer.tsx`, `src/context/StoreContext.tsx` (`addToCart`, `updateCartQuantity`, `removeFromCart`).
 
 #### FR-08: Promotional Coupon Verification & Anti-Replay
@@ -309,7 +310,7 @@ The matrix below maps each system requirement to its corresponding component, so
 | **NFR-01** | PBKDF2/SHA-256 Hashing | P0 | Security Service | `src/security/securityService.ts` | **Implemented** | WebCrypto API execution audit |
 | **NFR-02** | Anti-XSS Entity Sanitization | P0 | Security Service | `src/security/securityService.ts` | **Implemented** | Malicious `<script>` payload test |
 | **NFR-03** | IDOR Object Authorization | P0 | Security Service | `src/security/securityService.ts` | **Implemented** | Insecure direct reference probe |
-| **NFR-04** | LocalStorage/Database Resilience | P0 | Supabase Service | `src/services/supabaseService.ts`<br>`src/context/StoreContext.tsx` | **Implemented** | Offline network resilience verification |
+| **NFR-04** | Supabase Database Persistence | P0 | Supabase Service | `src/services/supabaseService.ts`<br>`src/context/StoreContext.tsx` | **Implemented** | Supabase PostgreSQL direct queries & Realtime |
 | **NFR-05** | Responsive Mobile Layout | P1 | Global Stylesheet | `src/index.css`<br>`src/components/layout/Navbar.tsx` | **Implemented** | Mobile viewport emulator testing |
 | **NFR-06** | Real-Time Audit Logging | P1 | Security Inspector | `src/components/security/SecurityInspectorModal.tsx` | **Implemented** | Live event stream audit validation |
 
@@ -319,7 +320,8 @@ The matrix below maps each system requirement to its corresponding component, so
 
 This specification represents the formal requirements baseline for Phase 1 of the SecureShop software development lifecycle. All functional and non-functional requirements detailed herein are actively deployed and verified within the repository codebase.
 
-- **Lead Software Architect:** Eng. Blue Member 1 (CET431 Architecture Lead)
-- **Application Security Engineer:** Eng. Blue Member 2 (Cryptography & Authentication Lead)
-- **Quality Assurance & Verification Specialist:** Eng. Red Member 1 (Penetration Testing Representative)
+- **Developer & Sole Author:** Osama Mohamed Moawad Zaytoun
+- **Student ID:** 230105355
+- **Academic Course:** CET431 — Software Security
+- **Department:** Computer Engineering Technology, Elsewedy University of Technology
 - **Evaluation Milestone:** University Oral Defense — Week 10

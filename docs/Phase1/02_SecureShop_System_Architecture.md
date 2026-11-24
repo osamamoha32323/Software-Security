@@ -6,6 +6,8 @@
 > **Course:** CET431 — Software Security | Fall 2026  
 > **Milestone:** Project Phase 1 Submission & Week 10 Oral Defense (5 Marks)  
 > **Document Identifier:** `SEC-ARCH-2026-PH1-V1.0`  
+> **Developer:** Osama Mohamed Moawad Zaytoun (Student ID: 230105355)  
+> **Implementation Mode:** Individual Project Implementation (Course standard team size: 6; subject to instructor approval)  
 > **Artifact References:** Vector Diagrams in `docs/Phase1/diagrams/`  
 
 ---
@@ -37,18 +39,19 @@ A forensic inspection of the codebase configuration files (`package.json`, `tsco
 
 ### 1.1 Frontend Architecture
 - **Single Page Application (SPA):** Built on React 19 and bundled via Vite. All client rendering, navigation, and view switching are managed in-memory without full document roundtrips.
-- **State Management:** Centralized through React Context API (`StoreContext.tsx`), implementing a single source of truth for products, orders, cart items, active coupons, authenticated sessions, security logs, and operational modes.
-- **Client Resilience:** Dual-tier caching strategy. LocalStorage mirrors all data structures (`STORAGE_KEYS`), enabling the application to continue functioning even if external database connections are firewalled or network connectivity is severed.
+- **State Management:** Centralized through React Context API (`StoreContext.tsx`), serving as the client-side state manager for products, orders, active cart, and authenticated session state.
+- **Data Persistence:** Authoritative business data (products, orders, users, coupons, and security logs) resides directly in Supabase PostgreSQL and is synchronized across active clients via Supabase Realtime (`postgres_changes`). LocalStorage is strictly limited to transient session identity (`secureshop_session_email`) to preserve login state across browser refresh; it does NOT store business entities or user balances.
 
 ### 1.2 Backend & Data Persistence Architecture
-- **Headless Database Architecture:** Direct interaction between the React client and the managed Supabase PostgreSQL instance using `@supabase/supabase-js`.
+- **Headless Database Architecture:** Direct communication between the React client and the managed Supabase PostgreSQL instance using `@supabase/supabase-js`.
 - **Database Endpoint:** `https://nojbpgdtlrcdyxsvmluh.supabase.co` connected through the public anon key (`sb_publishable_g8qFBCfqxyza6W2p0aIIkg_PEyxfmdl`).
-- **Administrative Database Scripting:** Direct administrative migrations and seeding script located in `scripts/setup-supabase.js`, utilizing the native `pg` driver over SSL to `aws-1-eu-west-1.pooler.supabase.com:6543`.
+- **Database Tables:** `products`, `users`, `orders`, `coupons`, and `security_logs`.
+- **Administrative Scripting:** Migration scripts located in `scripts/setup-supabase.js` for table setup and initial seed data.
 
-### 1.3 Authentication & Authorization Subsystems
-- **Client-Side Cryptographic Provider:** Passwords are never transmitted in plaintext. Authentication derives cryptographic keys locally using the standard browser `crypto.subtle` API via PBKDF2 (100,000 iterations, SHA-256, and random 16-byte salts).
-- **Session Model:** Client-persisted session containing the sanitized user object, stored under `STORAGE_KEYS.CURRENT_USER`.
-- **Authorization Engine:** Role-Based Access Control (`role: 'admin' | 'user'`) combined with Context-Aware Object Ownership verification (`order.userId === currentUser.id`) in `src/security/securityService.ts`.
+### 1.3 Authentication, Authorization & Trust Boundaries
+- **Client-Side Cryptographic Provider:** Passwords are never stored in plaintext. Passwords are salted (16-byte random salt) and hashed using PBKDF2 (100,000 iterations, SHA-256) via the Web Cryptography API (`crypto.subtle`).
+- **Session Model:** Transient session identifier (`secureshop_session_email`) used on mount to resolve the user record live from Supabase PostgreSQL. Store credit, user role, and security mode are always fetched fresh from the database.
+- **Critical Architectural Note:** Client-side validation (`validateOrderAccess`, `validateAdminAccess`, `validateCartQuantity`) provides immediate UX feedback and UI-level containment, but **does not replace database-enforced authorization (Row Level Security)**. In Phase 1, remote RLS policies are marked as a documented known finding and scheduled for Phase 2 hardening.
 
 ---
 
@@ -511,7 +514,9 @@ The security posture of SecureShop is implemented as a multi-tier defense system
 
 This architecture specification accurately reflects the structural implementation, data flows, database schemas, and trust boundaries implemented in the SecureShop repository.
 
-- **System Architect:** Eng. Blue Member 1 (Architecture & RBAC Lead)
-- **Security Engineering Reviewer:** Eng. Blue Member 2 (Authentication & Cryptography Lead)
+- **Developer & Sole Author:** Osama Mohamed Moawad Zaytoun
+- **Student ID:** 230105355
+- **Academic Course:** CET431 — Software Security
+- **Department:** Computer Engineering Technology, Elsewedy University of Technology
 - **Date of Verification:** Fall Semester 2026
 - **Status:** Phase 1 Architectural Baseline Approved

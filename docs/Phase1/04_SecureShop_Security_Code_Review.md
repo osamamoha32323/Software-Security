@@ -6,8 +6,9 @@
 > **Course:** CET431 — Software Security | Fall 2026  
 > **Milestone:** Project Phase 1 Submission & Week 10 Oral Defense (5 Marks)  
 > **Document Identifier:** `SEC-CR-2026-PH1-V1.0`  
+> **Developer:** Osama Mohamed Moawad Zaytoun (Student ID: 230105355)  
+> **Implementation Mode:** Individual Project Implementation (Course standard team size: 6; subject to instructor approval)  
 > **Review Scope:** Static Application Security Testing (SAST) & Architecture Code Audit  
-> **Target Revision:** Commit `bcdeed1` / `38d18c4` (Master Branch)  
 
 ---
 
@@ -61,9 +62,9 @@ The audit focused on examining the actual source files in `src/`, `scripts/`, an
    - When consecutive failures reach 5, sets `isLocked = true` and `lockUntil = Date.now() + 60000`.
    - *Verdict:* Successfully protects against automated dictionary attacks and rapid credential stuffing.
 3. **Session Management Finding (Area for Phase 2):**
-   - Active user session is serialized as JSON in `localStorage.setItem(STORAGE_KEYS.CURRENT_USER, ...)`.
-   - Because LocalStorage is accessible to any script executing in the document context, any undetected Cross-Site Scripting vulnerability could compromise this session object.
-   - *Phase 2 Recommendation:* Transition session storage to `HttpOnly`, `SameSite=Strict`, `Secure` cookies backed by server-side signed JWTs.
+   - Active user session stores the user email (`secureshop_session_email`) in local/session storage to preserve login state across refresh, with the full profile fetched fresh from Supabase.
+   - *Limitation:* The client currently derives and verifies hashes locally; full production security requires server-issued signed JWTs stored in `HttpOnly`, `SameSite=Strict` cookies.
+   - *Phase 2 Recommendation:* Transition to server-side authentication with signed sessions and database-enforced token revocation.
 
 ---
 
@@ -215,54 +216,56 @@ The audit focused on examining the actual source files in `src/`, `scripts/`, an
 
 ## 3. Comprehensive Security Coverage Matrix
 
-The matrix below documents the curriculum topics taught up to Week 9, evaluating the attack scenario, the naive baseline flaw, the implemented defense, code references, and verification status:
+The matrix below documents the curriculum topics taught up to Week 9, evaluating the attack scenario, the naive baseline flaw, the implemented defense, code references, status, and remaining limitations:
 
 ```
-+------------------------------------------------------------------------------------------------------------------------------------------+
-|                                                   SECURITY COVERAGE MATRIX (PHASE 1)                                                     |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| Code  | Security Topic          | Attack Scenario in SecureShop   | Implemented Defense           | Code File & Function | Status        |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-01| Cross-Site Scripting    | Injecting <script>alert(1)</script>| Entity encoding via sanitizeHtml| src/security/        | **Implemented|
-|       | (Stored & Reflected XSS)| in search or reviews            | & JSX native escaping        | securityService.ts   | & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-02| SQL & Search Injection  | Submitting ' OR '1'='1' -- in   | Regex whitelist filtering and | src/security/        | **Implemented|
-|       |                         | catalog search parameter        | token stripping (validateSearch)| securityService.ts  | & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-03| Broken Authentication & | Fast automated password         | PBKDF2/SHA-256 (100K iter)    | StoreContext.tsx     | **Implemented|
-|       | Credential Brute-Force  | dictionary attack on login      | + 60s lock after 5 failures   | & securityService.ts | & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-04| Insecure Direct Object  | Modifying order ID (#DK-1001)   | Object authorization guard    | src/security/        | **Implemented|
-|       | Reference (IDOR / BOLA) | to read other customers' data   | (order.userId === currentUser)| securityService.ts   | & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-05| Business Logic:         | Entering negative quantity (-5) | Integer, positive, and stock  | src/security/        | **Implemented|
-|       | Parameter Tampering     | to diminish cart subtotal       | bounds check (validateCartQty)| securityService.ts   | & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-06| Financial Logic:        | Applying WELCOME15 discount     | Single-use tracking via       | src/security/        | **Implemented|
-|       | Coupon Replay Abuse     | multiple times across orders    | coupon.usedByUsers array      | securityService.ts   | & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-07| Broken Access Control & | Regular user navigates directly | Strict RBAC guard validating  | AdminDashboard.tsx   | **Implemented|
-|       | Privilege Escalation    | to /admin dashboard view        | currentUser.role === 'admin'  | & securityService.ts | & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-08| Newsletter Privilege    | Claiming welcome coupon using   | Strict email equality check:  | StoreContext.tsx     | **Implemented|
-|       | & Email Spoofing        | an external or fake email       | inputEmail === user.email     | (subscribeNewsletter)| & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-09| Administrative Account  | Deleting or demoting the        | Sole admin protection:        | UserManager.tsx &    | **Implemented|
-|       | Tampering & Hostile Take| master admin@secureshop.edu     | immutable role, actions locked| StoreContext.tsx     | & Verified**  |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
-| SEC-10| Database Row Level      | Direct PostgREST API query      | Client-side logic guards      | Supabase PostgreSQL  | **Partially   |
-|       | Security (RLS)          | bypassing React application     | (Remote RLS not yet enabled)  | Schema Config        | Implemented** |
-+-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+
++------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                   SECURITY COVERAGE MATRIX (PHASE 1)                                                                 |
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| Code  | Security Topic          | Attack Scenario in SecureShop   | Implemented Defense           | Code File & Function | Status        | Limitation|
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-01| Cross-Site Scripting    | Injecting <script>alert(1)</script>| Entity encoding via sanitizeHtml| src/security/        | **Implemented| Client-   |
+|       | (Stored & Reflected XSS)| in search or reviews            | & React JSX escaping          | securityService.ts   | & Verified**  | side only |
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-02| SQL & Search Injection  | Submitting ' OR '1'='1' -- in   | Regex pattern check against   | src/security/        | **Partially   | Keyword   |
+|       |                         | catalog search parameter        | known SQL injection keywords  | securityService.ts   | Implemented** | filter != |
+|       |                         |                                 | (validateSearchQuery)         |                      |               | full SQLi |
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-03| Broken Authentication & | Automated password dictionary   | PBKDF2/SHA-256 (100K iter)    | StoreContext.tsx     | **Implemented| Lockout on|
+|       | Credential Brute-Force  | attack on login                 | + 60s lock after 5 failures   | & securityService.ts | & Verified**  | user doc  |
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-04| Insecure Direct Object  | Modifying order ID (#DK-1001)   | Client ownership check        | src/security/        | **Partially   | Browser   |
+|       | Reference (IDOR / BOLA) | to read other customers' data   | (order.userId === currentUser)| securityService.ts   | Implemented** | check; DB |
+|       |                         |                                 |                               |                      |               | RLS needed|
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-05| Business Logic:         | Entering negative quantity (-5) | Positive integer & stock check| src/security/        | **Partially   | Validated |
+|       | Parameter Tampering     | to diminish cart subtotal       | (validateCartQuantity)        | securityService.ts   | Implemented** | pre-save  |
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-06| Financial Logic:        | Applying WELCOME15 discount     | Single-use tracking via       | src/security/        | **Implemented| Needs DB  |
+|       | Coupon Replay Abuse     | multiple times across orders    | coupon.usedByUsers in database| securityService.ts   | & Verified**  | trans lock|
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-07| Broken Access Control & | Regular user navigates directly | Client-side RBAC guard check: | AdminDashboard.tsx   | **Partially   | Client UI |
+|       | Privilege Escalation    | to /admin dashboard view        | currentUser.role === 'admin'  | & securityService.ts | Implemented** | guard only|
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-08| Newsletter Privilege    | Claiming welcome coupon using   | Strict email equality check:  | StoreContext.tsx     | **Implemented| Single use|
+|       | & Email Spoofing        | an external or fake email       | inputEmail === user.email     | (subscribeNewsletter)| & Verified**  | per user  |
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-09| Administrative Account  | Deleting or demoting the        | Sole admin protection:        | UserManager.tsx &    | **Implemented| In-app    |
+|       | Tampering & Takeover    | master admin@secureshop.edu     | immutable role, actions locked| StoreContext.tsx     | & Verified**  | protection|
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
+| SEC-10| Database Row Level      | Direct PostgREST query          | Client-side logic filters;    | Supabase PostgreSQL  | **Not         | DB RLS not|
+|       | Security (RLS)          | bypassing React application     | remote RLS not yet enforced   | Schema Configuration | Verified**    | in harness|
++-------+-------------------------+---------------------------------+-------------------------------+----------------------+---------------+-----------+
 ```
 
 ---
 
-## 4. Status Legend & Definitions
+## 4. Status Legend & Evaluation Rules
 
-- **Implemented & Verified:** The defensive logic exists in source code, has been verified through manual execution and unit testing, and is demonstrable in the interactive Security Demonstration Hub.
-- **Partially Implemented:** The defense is enforced at one layer (e.g., Client / Application Service layer) but lacks full redundancy at lower layers (e.g., Database RLS policies). Documented transparently.
-- **Missing:** The defense is neither planned nor present in the codebase. (None in core scope).
-- **Not Verified:** Logic exists in code but has not been tested against active exploit payloads.
+- **Implemented & Verified:** The defense exists in source code, has been verified through functional testing, and operates as designed in the application tier.
+- **Partially Implemented:** The defensive control is active in the client or presentation layer, but lacks corresponding server-side or database-level enforcement (e.g. client keyword filtering vs database parameterized queries; client RBAC vs database RLS).
+- **Missing:** The defense is not implemented in the current milestone.
+- **Not Verified:** The mechanism exists in documentation or design but has not been verified against live exploit scenarios in a dedicated test harness.
 
 ---
 
@@ -270,8 +273,9 @@ The matrix below documents the curriculum topics taught up to Week 9, evaluating
 
 This static security review represents an accurate, objective, and evidence-based assessment of the SecureShop repository as of the Phase 1 milestone.
 
-- **Lead Application Security Reviewer:** Eng. Blue Member 2 (Cryptography & Authentication Lead)
-- **Defensive Engineering Verifier:** Eng. Blue Member 3 (Data Sanitization & Business Logic Lead)
-- **Peer Reviewer (Red Team):** Eng. Red Member 1 (Injection & Vulnerability Specialist)
+- **Developer & Auditor:** Osama Mohamed Moawad Zaytoun
+- **Student ID:** 230105355
+- **Academic Course:** CET431 — Software Security
+- **Department:** Computer Engineering Technology, Elsewedy University of Technology
 - **Evaluation Milestone:** University Oral Defense — Week 10
-- **Status:** Phase 1 Security Review Approved
+- **Status:** Phase 1 Security Review Complete & Submitted

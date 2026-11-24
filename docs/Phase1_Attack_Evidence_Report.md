@@ -3,15 +3,17 @@
 **Department of Computer Engineering Technology**  
 **Elsewedy University of Technology - Polytechnic of Egypt**  
 **Application:** SecureShop  
+**Developer & Evaluator:** Osama Mohamed Moawad Zaytoun (Student ID: 230105355)  
+**Submission Mode:** Individual Project Implementation (Course standard team size: 6; subject to instructor approval)  
 **Evaluation Requirement:** "For each topic, students must show that the attack works against a naive implementation and fails against their own."
 
 ---
 
 ## 1. Overview of Comparative Testing Methodology
 
-To satisfy the explicit evaluation criteria of CET431 Software Security, the development team engineered an internal comparative testing mechanism directly inside SecureShop. The application supports two distinct operational modes:
+To satisfy the evaluation criteria of CET431 Software Security, an internal comparative testing mechanism was developed directly inside SecureShop. The application supports two distinct operational modes:
 1. **Naive Implementation (Vulnerable Baseline):** Represents typical developer oversights (missing validation, no sanitization, missing object authorization, weak authentication).
-2. **SecureShop Implementation (Hardened Blue Team Defenses):** Enforces rigorous input sanitization, parameterized checks, cryptographic salt/PBKDF2 hashing, account lockout thresholds, and role/object-level authorization.
+2. **SecureShop Implementation (Hardened Defenses):** Enforces rigorous input sanitization, parameterized checks, cryptographic salt/PBKDF2 hashing, account lockout thresholds, and role/object-level authorization.
 
 Below is the verified experimental evidence for each security topic taught in the course up to Week 9.
 
@@ -22,7 +24,7 @@ Below is the verified experimental evidence for each security topic taught in th
 ### Topic 1: Cross-Site Scripting (XSS - Stored & Reflected)
 - **Vulnerability Category:** OWASP A03:2021 - Injection / CWE-79 (Cross-Site Scripting).
 - **Target Component:** Product Catalogue Search Bar, Product Detail Reviews, and User Profile.
-- **Red Team Attack Payload:**
+- **Comparative Attack Payload:**
   ```html
   <script>alert("XSS Vulnerability Detected in SecureShop!");</script>
   ```
@@ -54,7 +56,7 @@ Below is the verified experimental evidence for each security topic taught in th
 ### Topic 2: SQL / Search Query Injection
 - **Vulnerability Category:** OWASP A03:2021 - Injection / CWE-89 (SQL Injection).
 - **Target Component:** Product Search Engine and Filter Query Parameters.
-- **Red Team Attack Payload:**
+- **Comparative Attack Payload:**
   ```sql
   ' OR '1'='1' --
   ```
@@ -90,7 +92,7 @@ Below is the verified experimental evidence for each security topic taught in th
 ### Topic 3: Broken Authentication & Brute-Force Attacks
 - **Vulnerability Category:** OWASP A07:2021 - Identification & Authentication Failures / CWE-307.
 - **Target Component:** Authentication Service & User Login Modal.
-- **Red Team Attack Scenario:**
+- **Comparative Attack Scenario:**
   Automated submission of 10 rapid incorrect passwords against the administrator account `admin@secureshop.edu`.
 
 #### Naive Implementation Result (Attack Works):
@@ -118,7 +120,7 @@ Below is the verified experimental evidence for each security topic taught in th
 ### Topic 4: Insecure Direct Object Reference (IDOR)
 - **Vulnerability Category:** OWASP A01:2021 - Broken Access Control / CWE-639.
 - **Target Component:** Order Lookup and Tracking Modal (`OrderTrackingModal.tsx`).
-- **Red Team Attack Scenario:**
+- **Comparative Attack Scenario:**
   User logged in as `user@secureshop.edu` submits a query for Order ID `#DK-1001` or `#SEC-1001` belonging to customer `سارة خالد` or an unauthenticated third party.
 
 #### Naive Implementation Result (Attack Works):
@@ -154,7 +156,7 @@ Below is the verified experimental evidence for each security topic taught in th
 ### Topic 5: Business Logic Flaw (Negative Quantity Cart Exploit)
 - **Vulnerability Category:** OWASP A04:2021 - Insecure Design / CWE-840.
 - **Target Component:** Shopping Cart Drawer & Checkout Subtotal Calculator.
-- **Red Team Attack Payload:**
+- **Comparative Attack Payload:**
   Direct modification of quantity in cart input: `quantity = -5`.
 
 #### Naive Implementation Result (Attack Works):
@@ -189,7 +191,7 @@ Below is the verified experimental evidence for each security topic taught in th
 ### Topic 6: Promotional Coupon Replay & Tampering Attack
 - **Vulnerability Category:** OWASP A04:2021 - Insecure Design / CWE-799 (Improper Control of Generation of Code).
 - **Target Component:** Checkout Modal Coupon Processing.
-- **Red Team Attack Scenario:**
+- **Comparative Attack Scenario:**
   A customer applies the single-use newsletter discount code `WELCOME15` (15% off) on Order 1, and subsequently applies the exact same coupon on Order 2.
 
 #### Naive Implementation Result (Attack Works):
@@ -215,7 +217,7 @@ Below is the verified experimental evidence for each security topic taught in th
 ### Topic 7: Broken Access Control & Vertical Privilege Escalation
 - **Vulnerability Category:** OWASP A01:2021 - Broken Access Control / CWE-285.
 - **Target Component:** Administrative Panel (`/admin` and `AdminDashboard.tsx`).
-- **Red Team Attack Scenario:**
+- **Comparative Attack Scenario:**
   A visitor logged in as normal user `user@secureshop.edu` attempts to open the Admin Panel to modify user balances, change product prices, and delete coupons.
 
 #### Naive Implementation Result (Attack Works):
@@ -256,4 +258,14 @@ Below is the verified experimental evidence for each security topic taught in th
 | 6. Coupon Replay Abuse | ❌ Vulnerable | ✅ Protected | `usedByUsers` Redemption Ledger |
 | 7. Admin Privilege Escalation | ❌ Vulnerable | ✅ Protected | Active RBAC Route Guard |
 
-All seven topics have been successfully proven to fail against the SecureShop implementation and succeed against the naive configuration.
+All seven topics have been successfully demonstrated to fail against the SecureShop implementation and succeed against the naive configuration.
+
+---
+
+## 4. Assessment Sign-Off & Submission Record
+
+- **Developer & Evaluator:** Osama Mohamed Moawad Zaytoun
+- **Student ID:** 230105355
+- **Academic Course:** CET431 — Software Security
+- **Department:** Computer Engineering Technology, Elsewedy University of Technology
+- **Phase 1 Evaluation Status:** Verified for Week 10 Demonstration

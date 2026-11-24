@@ -3,15 +3,17 @@
 **Department of Computer Engineering Technology**  
 **Elsewedy University of Technology - Polytechnic of Egypt**  
 **Project Application:** SecureShop E-Commerce System  
+**Developer:** Osama Mohamed Moawad Zaytoun (Student ID: 230105355)  
+**Submission Mode:** Individual Project Implementation (Course standard team size: 6; subject to instructor approval)  
 **Deliverable:** Phase 1 Submission (Week 9 - Week 10 Discussion)
 
 ---
 
 ## 1. Executive Summary
 
-This Security Design Report provides a thorough architectural and threat-modeling analysis for **SecureShop**, an e-commerce platform built to meet the rigorous security requirements of CET431. The project follows a dual-team collaborative development model comprising **3 Blue Team members** (Defenders and Core Engineers) and **3 Red Team members** (Penetration Testers and Security Evaluators).
+This Security Design Report provides a thorough architectural and threat-modeling analysis for **SecureShop**, an e-commerce platform built to satisfy the software security requirements of CET431. The project was implemented and documented individually by developer Osama Mohamed Moawad Zaytoun, who assumed responsibilities across architecture, frontend development, database integration, authentication, defensive engineering, and testing.
 
-Phase 1 focuses on establishing the application baseline, defining the attack surface across all eight functional areas, constructing a formal threat model utilizing the **STRIDE** methodology, and verifying the implementation of defenses for all security topics taught up to Week 9. To comply with course standards, every defensive mechanism is demonstrated through a side-by-side comparative model: highlighting how attacks succeed against a naive baseline and how they are completely neutralized within the hardened SecureShop codebase.
+Phase 1 focuses on establishing the application baseline, defining the attack surface across all functional areas, constructing a formal threat model utilizing the **STRIDE** methodology, and implementing defenses for all security topics taught up to Week 9. To comply with course standards, defensive mechanisms are demonstrated through a comparative model: highlighting how attacks succeed against a naive baseline and how they are intercepted within the hardened SecureShop codebase. Client-side checks are supplemented with database storage in Supabase PostgreSQL, with remote Row Level Security (RLS) policies planned as a dedicated hardening objective for Phase 2.
 
 ---
 
@@ -76,7 +78,7 @@ The threat model considers four distinct threat agent personas:
 
 The system was evaluated against each dimension of the **STRIDE** methodology:
 
-| STRIDE Category | Threat Description in SecureShop | Impacted Component | Vulnerability in Naive System | SecureShop Blue Team Mitigation |
+| STRIDE Category | Threat Description in SecureShop | Impacted Component | Vulnerability in Naive System | SecureShop Implemented Mitigation |
 |:---|:---|:---|:---|:---|
 | **Spoofing (S)** | An attacker guesses or brute-forces another user or administrator's password. | Authentication Process | No rate limiting; passwords stored in plaintext or weak unsalted hashes. | Password hashing using PBKDF2 with SHA-256 and 16-byte random salt; account lock for 60 seconds after 5 failed attempts. |
 | **Tampering (T)** | Attacker changes item quantity to `-5` in the cart or manipulates the order subtotal. | Shopping Cart & Checkout | System trusts client-side price/quantity numbers directly without validation. | Backend validation in `validateCartQuantity` strictly enforces positive non-zero integers within available stock. |

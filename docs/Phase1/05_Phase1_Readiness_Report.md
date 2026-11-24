@@ -6,6 +6,8 @@
 > **Course:** CET431 — Software Security | Fall 2026  
 > **Milestone Evaluation:** Phase 1 Project Submission & Week 10 Oral Discussion (5 Marks)  
 > **Document Identifier:** `SEC-READY-2026-PH1-V1.0`  
+> **Developer:** Osama Mohamed Moawad Zaytoun (Student ID: 230105355)  
+> **Implementation Mode:** Individual Project Submission (Course standard: 6 members; subject to instructor approval)  
 > **Target Date:** Week 10 Academic Review Window  
 
 ---
@@ -87,9 +89,9 @@ The table below contrasts each formal university requirement against its actual 
 
 ---
 
-## 4. Pre-Discussion Action Checklist for Team Members
+## 4. Pre-Discussion Action Checklist & Demonstration Protocol
 
-To maximize score during the Week 10 oral discussion, team members should follow this operational protocol:
+To ensure a smooth presentation during the Week 10 oral discussion, the following operational protocol is verified:
 
 ### 4.1 Technical Verification Prior to Evaluation
 1. **Repository & Build Sanity:**
@@ -99,10 +101,10 @@ To maximize score during the Week 10 oral discussion, team members should follow
    npm run dev             # Start local development server at http://localhost:5173
    ```
 2. **Preset Demonstration Accounts:**
-   Ensure the three demonstration accounts are ready:
-   - **Administrator:** `admin@secureshop.edu` / `Admin@123456`
-   - **Customer:** `user@secureshop.edu` / `User@123456`
-   - **Pending Account:** `newbie@secureshop.edu` / `New@123456` (Confirmation code: `789012`)
+   Ensure the two primary evaluation accounts are ready in the database:
+   - **Administrator Account:** `admin@secureshop.edu` (Role: Admin) — Password: `Provided securely for evaluation`
+   - **Customer Account:** `user@secureshop.edu` (Role: User) — Password: `Provided securely for evaluation`
+   *(Note: Historical commits containing test passwords or API keys must be rotated before production deployment).*
 
 ### 4.2 Step-by-Step Live Oral Defense Script
 
@@ -112,77 +114,73 @@ When requested by examiners to demonstrate the software security topics:
 sequenceDiagram
     autonumber
     actor Professor as University Examiner
-    actor Student as CET431 Student
+    actor Student as Osama Mohamed (Student ID: 230105355)
     participant UI as SecureShop Web App
-    participant SecHub as Security Demonstration Hub
+    participant Admin as Admin Dashboard (User Management)
+    participant SecHub as Security Lab & Audit Log
 
-    Professor->>Student: "Demonstrate Topic SEC-01 (Cross-Site Scripting)"
-    Student->>UI: Switch Top Header Toggle to "⚠️ الوضع الساذج (Naive Mode)"
-    Student->>UI: Input '<script>alert(1)</script>' in Search or Reviews
-    UI-->>Professor: Script executes / alert triggers (Attack Works in Naive)
-    Student->>UI: Switch Top Header Toggle to "🛡️ الوضع الآمن (SecureShop Mode)"
-    Student->>UI: Re-submit identical payload
-    UI-->>Professor: Payload safely entity-encoded & rendered as plain text
-    Student->>SecHub: Open "معمل الأمان والمصفوفة"
-    SecHub-->>Professor: Shows real-time Security Audit Log with timestamp & payload
+    Professor->>Student: "Demonstrate Topic SEC-01 (Cross-Site Scripting) and SEC-05"
+    Student->>Admin: Access Admin Panel -> User Management table
+    Student->>Admin: Toggle User Security Mode to "⚠️ الوضع الساذج (Naive)" for test account
+    Student->>UI: Input test payload (e.g. negative quantity or XSS probe)
+    UI-->>Professor: Demonstrates naive baseline behavior (vulnerability exposed)
+    Student->>Admin: Toggle User Security Mode back to "🛡️ الوضع الآمن (SecureShop)"
+    Student->>UI: Re-submit identical test payload
+    UI-->>Professor: Payload safely intercepted, entity-encoded, or rejected
+    Student->>SecHub: Inspect Security Audit Log
+    SecHub-->>Professor: Displays real-time logged event with timestamp & payload details
 ```
 
 1. **Step 1: Introduction to Dual-Mode Architecture:**
    - Explain to instructors that SecureShop implements a dual-mode engine specifically to fulfill the curriculum requirement: *"Show that the attack works against a naive baseline and fails against your own."*
+   - Highlight that regular customer accounts do not see the lab banner or toggle; security mode is controlled per-user from the Admin User Management panel.
 2. **Step 2: Demonstrate Broken Authentication & Brute Force (SEC-03):**
    - Attempt 5 incorrect passwords on `user@secureshop.edu`.
    - Show the interactive 60-second account lockout countdown timer appearing on screen.
 3. **Step 3: Demonstrate Broken Access Control / IDOR (SEC-04):**
    - Log in as `user@secureshop.edu`.
    - Open Order Tracking and attempt to inspect order `#DK-1001` (belonging to another customer).
-   - Show the red `403 Forbidden: IDOR attempt blocked` banner.
+   - Show the client-side authorization refusal and audit log trigger.
 4. **Step 4: Demonstrate Vertical Privilege Escalation (SEC-07):**
    - While logged in as `user@secureshop.edu`, attempt to open `/admin`.
    - Show the RBAC guard displaying a full-screen `403 Access Denied` alert.
 5. **Step 5: Demonstrate Negative Quantity Tampering (SEC-05):**
    - Open the shopping cart drawer and enter `-5`.
-   - Show the input being rejected and clamped to `1` with an explicit alert.
+   - Show the input being rejected and clamped to positive values with an explicit validation alert.
 6. **Step 6: Demonstrate Single-Use Coupon Anti-Replay (SEC-06):**
-   - Apply coupon `WELCOME15` on a checkout. Complete the order.
-   - Attempt to apply `WELCOME15` a second time; show the `Coupon Replay Blocked` alert.
+   - Apply coupon `WELCOME15` on checkout. Complete the order.
+   - Attempt to apply `WELCOME15` a second time; show the single-use replay protection alert.
 7. **Step 7: Demonstrate Newsletter Strict Email Binding:**
-   - Attempt to enter a different email in the newsletter box while logged in.
-   - Show the security alert refusing mismatched emails.
+   - Attempt to enter a different email in the newsletter subscription while logged in.
+   - Show the security alert refusing mismatched emails to prevent coupon harvesting.
 
 ---
 
 ## 5. Identified Known Findings & Phase 2 Roadmap
 
-In accordance with strict academic engineering principles, we maintain full transparency regarding current architectural limitations and the roadmap for Phase 2:
+In accordance with strict academic engineering principles, full transparency is maintained regarding current architectural limitations and the roadmap for Phase 2:
 
 ### 5.1 Documented Known Finding: Supabase Table Row Level Security (RLS)
-- **Current Observation:** The remote Supabase PostgreSQL database tables do not currently have Row Level Security (RLS) enabled.
-- **Compensating Security Control:** All access control, ownership verification, and role checks are actively enforced in the application logic tier prior to query dispatch.
-- **Phase 2 Milestone Goal:** Write PostgreSQL RLS policies that mirror the application logic directly in database rules:
-  ```sql
-  ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
-  CREATE POLICY "Users can only select their own orders"
-    ON public.orders FOR SELECT
-    USING (auth.uid() = user_id OR EXISTS (
-      SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'
-    ));
-  ```
+- **Current Observation:** The remote Supabase PostgreSQL database tables do not currently have Row Level Security (RLS) verified or enforced.
+- **Compensating Security Control:** All access control, ownership verification, and role checks are currently evaluated in the application logic tier prior to query dispatch.
+- **Limitation:** Client-side checks alone do not protect against an attacker interacting directly with PostgREST using the anon key.
+- **Phase 2 Milestone Goal:** Enforce PostgreSQL RLS policies that mirror the application logic directly in database rules.
 
 ### 5.2 Phase 2 Planned Defensive Capabilities (Weeks 10–14)
-1. **Cryptographic Anti-CSRF Tokens:** Implement unique session-bound CSRF tokens if state is transitioned to cookie-based sessions.
-2. **Cryptographic API Request Signing:** Introduce HMAC-SHA256 request signing between client requests and a dedicated backend proxy.
-3. **Automated End-to-End Security Testing Suite:** Implement Cypress or Playwright automated security regression tests executing common OWASP attack vectors on every build.
+1. **Server-Side Row Level Security:** Implement comprehensive RLS policies on `users`, `orders`, `products`, `coupons`, and `security_logs`.
+2. **Database-Level Atomic Transactions:** Wrap checkout, inventory deduction, and wallet debit in PostgreSQL stored procedures (`plpgsql`) with explicit transaction locking.
+3. **Automated End-to-End Security Testing Suite:** Implement automated regression tests executing common OWASP attack vectors on every build.
 
 ---
 
 ## 6. Document Sign-Off & Official Submission Record
 
-This Readiness Report confirms that the **SecureShop** e-commerce project has achieved all requisite functional, architectural, threat modeling, and defensive criteria for **Phase 1** of CET431 Software Security.
+This Readiness Report confirms the status and readiness of the **SecureShop** e-commerce project for **Phase 1** of CET431 Software Security.
 
-- **Project Lead Architect:** Eng. Blue Member 1
-- **Security Engineering Lead:** Eng. Blue Member 2
-- **Lead Penetration Tester:** Eng. Red Member 1
+- **Developer & Sole Author:** Osama Mohamed Moawad Zaytoun
+- **Student ID:** 230105355
 - **Academic Course:** CET431 — Software Security
 - **Department:** Computer Engineering Technology, Elsewedy University of Technology
+- **Submission Type:** Individual Project Implementation (Subject to instructor approval)
 - **Submission Date:** Fall Semester 2026
-- **Status:** **APPROVED & SUBMITTED FOR WEEK 10 EVALUATION**
+- **Status:** **PREPARED FOR WEEK 10 EVALUATION**
